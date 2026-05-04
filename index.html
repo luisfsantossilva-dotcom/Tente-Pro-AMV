@@ -307,17 +307,17 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
     <div class="sec-hdr" onclick="togSec(this)">📋 Chantier & client</div>
     <div class="sec-body">
       <div class="fr">
-        <div class="fg"><label>Chantier / Objet</label><input id="chantier" placeholder="Nom du chantier"></div>
-        <div class="fg"><label>Client</label><input id="client" placeholder="Nom du client"></div>
+        <div class="fg"><label>Chantier / Objet</label><input id="chantier" placeholder="Nom du chantier" oninput="cmdSaveDraft({chantier:this.value})"></div>
+        <div class="fg"><label>Client</label><input id="client" placeholder="Nom du client" oninput="cmdSaveDraft({client:this.value})"></div>
       </div>
       <div class="fr">
-        <div class="fg"><label>Date sortie</label><input id="dateOut" type="date"></div>
-        <div class="fg"><label>Date retour</label><input id="dateBack" type="date"></div>
+        <div class="fg"><label>Date sortie</label><input id="dateOut" type="date" onchange="cmdSaveDraft({dateOut:this.value})"></div>
+        <div class="fg"><label>Date retour</label><input id="dateBack" type="date" onchange="cmdSaveDraft({dateBack:this.value})"></div>
       </div>
       <div class="f1"><div class="fg"><label>Adresse client (rue, CP ville)</label><textarea id="cmd-adresse" rows="2" placeholder="Sus la Chapelle 12&#10;1532 Fetigny" style="width:100%;resize:vertical;padding:4px 7px;border:1.5px solid var(--border2);border-radius:5px;font-family:var(--font);font-size:11px;background:var(--bg2);color:var(--text)" oninput="cmdSaveDraft({adresse:this.value})"></textarea></div></div>
       <div class="fr">
         <div class="fg"><label>Référence (ex: ap/aj)</label><input id="cmd-ref" placeholder="ap/aj" oninput="cmdSaveDraft({ref:this.value})"></div>
-        <div class="fg"><label>Désignation (optionnel)</label><input id="designation" placeholder="Auto-générée si vide"></div>
+        <div class="fg"><label>Désignation (optionnel)</label><input id="designation" placeholder="Auto-générée si vide" oninput="cmdSaveDraft({designation:this.value})"></div>
       </div>
     </div>
   </div>
@@ -2642,8 +2642,14 @@ function restorePersisted(){
   if(c){COMPANY=c;$('company-display').textContent=c;$('ph-company').textContent=c;}
   // Restore commande header fields
   const d=cmdGetDraft();
-  if(d.adresse){const el=document.getElementById('cmd-adresse');if(el)el.value=d.adresse;}
-  if(d.ref){const el=document.getElementById('cmd-ref');if(el)el.value=d.ref;}
+  const sv=(id,val)=>{const e=document.getElementById(id);if(e&&val!==undefined&&val!==null&&val!=='')e.value=val;};
+  sv('chantier',    d.chantier);
+  sv('client',      d.client);
+  sv('dateOut',     d.dateOut);
+  sv('dateBack',    d.dateBack);
+  sv('designation', d.designation);
+  sv('cmd-adresse', d.adresse);
+  sv('cmd-ref',     d.ref);
 }
 
 /* ══════════════════════════════════════
@@ -4610,7 +4616,10 @@ function commandeLeft(){
             <div style="color:var(--text3)">${cmd.dateOut||'?'} → ${cmd.dateBack||'?'}</div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">
               <span style="color:var(--text3)">${cmd.tentes?.length||0} tente(s)</span>
-              <button onclick="cmdDeleteCommand('${cmd.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0 3px">🗑</button>
+              <div style="display:flex;gap:4px">
+                <button onclick="cmdEditCommand('${cmd.id}')" style="padding:1px 7px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--blue);font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font)">✏</button>
+                <button onclick="cmdDeleteCommand('${cmd.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0 3px">🗑</button>
+              </div>
             </div>
           </div>`;
         }).join('')}
@@ -6721,14 +6730,53 @@ function cmdFinalizeCommand(){
     createdAt:new Date().toISOString()
   });
   cmdSaveCommands(cmds);
-  alert('✅ Commande confirmée et enregistrée.\nVous pouvez maintenant vérifier la disponibilité.');
+  alert('✅ Chantier confirmé et enregistré !');
+  // Reset complet du draft pour nouveau chantier
+  localStorage.removeItem('cdm_cmd_draft');
+  // Vider tous les champs
+  ['chantier','client','dateOut','dateBack','designation'].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.value='';
+  });
+  const adEl=document.getElementById('cmd-adresse'); if(adEl) adEl.value='';
+  const refEl=document.getElementById('cmd-ref'); if(refEl) refEl.value='';
+  // Mettre la date de sortie à aujourd'hui par défaut
+  const dOut=document.getElementById('dateOut');
+  if(dOut) dOut.value=new Date().toISOString().split('T')[0];
   renderCommande();
 }
 
 function cmdDeleteCommand(id){
-  if(!confirm('Supprimer cette commande confirmée ?')) return;
+  if(!confirm('Supprimer ce chantier confirmé ?')) return;
   cmdSaveCommands(cmdGetCommands().filter(c=>c.id!==id));
   renderCommande();
+}
+
+function cmdEditCommand(id){
+  const cmds = cmdGetCommands();
+  const cmd = cmds.find(c=>c.id===id);
+  if(!cmd) return;
+  // Charger le chantier dans le draft pour édition
+  if(!confirm('Éditer "'+( cmd.chantier||'Sans nom')+'" ?\nLe chantier actuel sera remplacé par ce chantier pour édition.')) return;
+  // Remettre dans le draft
+  localStorage.setItem('cdm_cmd_draft', JSON.stringify({
+    tentes: cmd.tentes||[],
+    containers: cmd.containers||[],
+    chauffage: cmd.chauffage||[],
+    mobilier: cmd.mobilier||{},
+    _editingId: id
+  }));
+  // Remplir les champs
+  const sv=(id2,val)=>{const e=document.getElementById(id2);if(e&&val)e.value=val;};
+  sv('chantier',    cmd.chantier);
+  sv('client',      cmd.client);
+  sv('dateOut',     cmd.dateOut);
+  sv('dateBack',    cmd.dateBack);
+  sv('designation', cmd.designation);
+  const adEl=document.getElementById('cmd-adresse'); if(adEl&&cmd.adresse) adEl.value=cmd.adresse;
+  // Supprimer de la liste des confirmés (sera re-confirmé après édition)
+  cmdSaveCommands(cmds.filter(c=>c.id!==id));
+  renderCommande();
+  syncStatus('✏ Chantier chargé pour édition', '#2563eb', 3000);
 }
 
 /* Pièces engagées sur une période (toutes commandes qui se chevauchent) */
