@@ -2234,6 +2234,10 @@ function params(){
   // Modules spéciaux: maintenant gérés automatiquement par décomposition L = N×5 + reste
   // p.specialMods n'est plus utilisé - la décomposition se fait dans le moteur
   p.hasPlancherZones=(S.plancherZones||[]).filter(z=>z.w>0&&z.l>0).length>0;
+  // Plancher — toujours injecter depuis S (les inputs oninput mettent à jour S)
+  p.plancherW   = S.plancherW   || 10;
+  p.plancherL   = S.plancherL   || 20;
+  p.plancherPan = S.plancherPan || '0.85';
   return p;
 }
 
@@ -7136,122 +7140,121 @@ function commandeGantt(){
    MODULE PLANCHER
 ══════════════════════════════════════ */
 const PLANCHER = {
-  // Tubes sol disponibles (8.5m exclu : tube structural spécial à trous 0,85m)
-  // TUBES_HM dépend de la famille de panneaux (voir getTubes)
+  // ── Tubes disponibles (valables pour toutes familles de panneaux) ─
+  // Tube sol : 3m, 4m, 5m, 6m, 8m (longueurs standards en stock)
+  // Pour panneau 0.85m on ajoute 4.25m (5×0.85) et 5.95m (7×0.85) et 8.5m (10×0.85)
+  TUBES_STD: [300, 400, 425, 500, 595, 600, 800, 850], // en cm
 
-  // DP : combinaison optimale de tubes pour couvrir EXACTEMENT la largeur W
-  // Minimise le nombre de pièces, préfère les plus grandes
-  getTubes(pan){
-    // Tubes disponibles: 4100mm (4,1m), 5950mm (5,95m), 8500mm (8,5m)
-    // En demi-mètres: 8.2, 11.9, 17
-    // On arrondit à 0.05m près pour la combinaison
-    return [8.2, 11.9, 17]; // 4,1m / 5,95m / 8,5m
-  },
-  bestCombo(W, pan){
-    // Travailler en centièmes de mètre pour précision
-    // Tubes: 4.10m=410, 5.95m=595, 8.50m=850
-    const TUBES_CM = [410, 595, 850];
+  // ── DP : combinaison minimale de tubes ≥ W ───────────────────────
+  bestCombo(W, pan) {
     const wCm = Math.round(W * 100);
-    const INF = 9999;
-    const dp  = new Array(wCm+1).fill(INF);
-    const par = new Array(wCm+1).fill(0);
+    const INF = 99999;
+    const N   = wCm + 301; // on cherche jusqu'à wCm + 3m au-dessus
+    const dp  = new Array(N).fill(INF);
+    const par = new Array(N).fill(0);
     dp[0] = 0;
-    for(let a=1; a<=wCm; a++){
-      for(const t of TUBES_CM){
-        if(t<=a && dp[a-t]+1 < dp[a]){ dp[a]=dp[a-t]+1; par[a]=t; }
+    for (let a = 1; a < N; a++) {
+      for (const t of this.TUBES_STD) {
+        if (t <= a && dp[a - t] + 1 < dp[a]) { dp[a] = dp[a - t] + 1; par[a] = t; }
       }
     }
-    if(dp[wCm]===INF){
-      // Aucune combinaison exacte — trouver la plus proche supérieure
-      let best = wCm;
-      while(best<=wCm+200 && dp[best]===INF) best++;
-      if(dp[best]!==INF){
-        const combo=[];
-        let rem=best;
-        while(rem>0){ combo.push(par[rem]/100); rem-=par[rem]; }
-        return combo.sort((a,b)=>b-a);
-      }
-      return [W]; // fallback
-    }
-    const combo=[];
-    let rem=wCm;
-    while(rem>0){ combo.push(par[rem]/100); rem-=par[rem]; }
-    return combo.sort((a,b)=>b-a);
+    // Trouver la solution exacte ou la plus courte ≥ wCm
+    let target = wCm;
+    while (target < N && dp[target] === INF) target++;
+    if (target >= N) return [W]; // fallback ultime
+    const combo = [];
+    let rem = target;
+    while (rem > 0) { combo.push(par[rem] / 100); rem -= par[rem]; }
+    return combo.sort((a, b) => b - a);
   },
 
-  // Compte les occurrences par longueur pour le listing
-  comboCount(combo){
-    const cnt={};
-    combo.forEach(t=>{ const k=t.toString().replace('.',',')+'m'; cnt[k]=(cnt[k]||0)+1; });
+  // ── Compte les occurrences par longueur ──────────────────────────
+  comboCount(combo) {
+    const cnt = {};
+    combo.forEach(t => {
+      const k = t.toString().replace('.', ',') + 'm';
+      cnt[k] = (cnt[k] || 0) + 1;
+    });
     return cnt;
   },
 
-  build(p){
-    const W       = Math.max(1, +(p.plancherW||10));
-    const L       = Math.max(1, +(p.plancherL||20));
-    // Famille de panneaux et tube correspondant
-    // 0.85 → Tube sol 0,85 | 0.5 → Tube sol 0,5 | 1 → Tube sol 0,5 (2×1m panels)
-    const pan = '0.85';  // Toujours 0,85m — tubes 4100/5950/8500mm
-    const panLarg  = 0.85;
-    const tubeType = 'Tube sol plancher';  // nom générique dans le stock
+  // ── Nom du tube selon famille de panneaux ────────────────────────
+  tubeName(tLen, pan) {
+    const tk = tLen.toString().replace('.', ',') + 'm';
+    if (pan === '0.85') return 'Tube sol 0,85 — ' + tk;
+    if (pan === '0.5')  return 'Tube sol 0,5 — '  + tk;
+    return 'Tube sol 1,0 — ' + tk;
+  },
 
-    // ── Tubes ──────────────────────────────────────────────────────
-    const nTravees = Math.ceil(L/2) + 1;
+  build(p) {
+    const W   = Math.max(1, +(p.plancherW  || 10));
+    const L   = Math.max(1, +(p.plancherL  || 20));
+    const pan = p.plancherPan || '0.85';
+
+    // Largeur physique d'un panneau
+    const panLarg = pan === '0.85' ? 0.85 : pan === '1' ? 1.0 : 0.5;
+
+    // ── Tubes porteurs (sens largeur, 1 rangée tous les 2m) ──────────
+    const nTravees = Math.floor(L / 2) + 1;
     const combo    = this.bestCombo(W, pan);
     const cnt      = this.comboCount(combo);
 
-    // ── Panneaux ───────────────────────────────────────────────────
-    // Noms selon la famille choisie
-    let pan2Nom, pan1Nom;
-    if(pan==='0.85')  { pan2Nom='Panneau 2m×0,85m'; pan1Nom='Panneau 1m×0,85m'; }
-    else if(pan==='1'){ pan2Nom='Panneau 2m×1m';    pan1Nom='Panneau 1m×1m'; }
-    else               { pan2Nom='Panneau 2m×0,5m';  pan1Nom='Panneau 1m×0,5m'; }
+    // ── Panneaux ─────────────────────────────────────────────────────
+    const pan2Nom = pan === '0.85' ? 'Panneau 2m×0,85m'
+                  : pan === '1'    ? 'Panneau 2m×1m'
+                                   : 'Panneau 2m×0,5m';
+    const pan1Nom = pan === '0.85' ? 'Panneau 1m×0,85m'
+                  : pan === '1'    ? 'Panneau 1m×1m'
+                                   : 'Panneau 1m×0,5m';
 
     const nPanLargFull = Math.floor(W / panLarg);
-    const wRem         = Math.round((W - nPanLargFull*panLarg)*100)/100;
-    const nPanLongFull = Math.floor(L/2);
-    const lRem         = L - nPanLongFull*2;
+    const wRem         = Math.round((W - nPanLargFull * panLarg) * 1000) / 1000;
+    const nPanLongFull = Math.floor(L / 2);
+    const lRem         = L - nPanLongFull * 2; // 0 ou 1m
 
     const nPan2  = nPanLongFull * nPanLargFull;
     const nPan1L = lRem > 0 ? nPanLargFull : 0;
 
-    // Reste en largeur : complément avec panneaux 0,5m ou 0,85m selon famille
-    let nPan2w=0, nPan1w=0, panWNom='';
-    if(wRem >= 0.05){
-      if(pan==='0.85'){ panWNom='Panneau 2m×0,5m'; }
-      else if(pan==='1'){ panWNom='Panneau 2m×0,5m'; }
-      else { panWNom='Panneau 2m×0,85m'; }  // si 0.5 → complément avec 0.85
-      nPan2w = nPanLongFull;
-      nPan1w = lRem>0 ? 1 : 0;
+    // Complément largeur
+    let nPan2w = 0, nPan1w = 0, panWNom = '';
+    if (wRem >= 0.05) {
+      panWNom = pan === '0.5' ? 'Panneau 2m×0,85m' : 'Panneau 2m×0,5m';
+      nPan2w  = nPanLongFull;
+      nPan1w  = lRem > 0 ? 1 : 0;
     }
 
+    // ── Construction du tableau A ────────────────────────────────────
     const A = [];
 
-    // Tubes avec leur type (0,5 ou 0,85)
-    Object.entries(cnt).forEach(([k, qParTravee])=>{
+    // Tubes
+    Object.entries(cnt).forEach(([k, qParTravee]) => {
+      const tLen = parseFloat(k.replace(',', '.'));
       A.push({
-        name:   'Tube plancher '+k,
+        name:   this.tubeName(tLen, pan),
         qty:    qParTravee * nTravees,
-        detail: qParTravee+'×'+k+' / travée × '+nTravees+' travées'
+        detail: qParTravee + '×' + k + ' / travée × ' + nTravees + ' travées'
       });
     });
 
-    // Panneaux
-    if(nPan2  >0) A.push({name:pan2Nom, qty:nPan2});
-    if(nPan1L >0) A.push({name:pan1Nom, qty:nPan1L, detail:'Reste longueur'});
-    if(nPan2w >0) A.push({name:panWNom, qty:nPan2w, detail:'Complément largeur'});
-    if(nPan1w >0) A.push({name:panWNom.replace('2m','1m'), qty:nPan1w, detail:'Complément larg.+long.'});
+    // Panneaux principaux
+    if (nPan2  > 0) A.push({ name: pan2Nom, qty: nPan2 });
+    if (nPan1L > 0) A.push({ name: pan1Nom, qty: nPan1L, detail: 'L impair — rang 1m' });
+    // Complément largeur
+    if (nPan2w > 0) A.push({ name: panWNom, qty: nPan2w, detail: 'Complément W (reste ' + wRem.toFixed(2) + 'm)' });
+    if (nPan1w > 0) A.push({ name: panWNom.replace('2m', '1m'), qty: nPan1w, detail: 'Complément W+L' });
 
-    const surf     = W * L;
-    const comboStr = combo.map(t=>t.toString().replace('.',',')+'m').join('+');
-    const nPanTotal= nPan2 + nPan1L + nPan2w + nPan1w;
+    const surf      = W * L;
+    const comboStr  = combo.map(t => t.toString().replace('.', ',') + 'm').join(' + ');
+    const nPanTotal = nPan2 + nPan1L + nPan2w + nPan1w;
+    const tubeType  = pan === '0.85' ? 'Tube sol 0,85m'
+                    : pan === '1'    ? 'Tube sol 1,0m' : 'Tube sol 0,5m';
 
     return {
-      A, B:[],
-      des:       'Plancher '+W+'×'+L+'m',
-      surface:   surf,
-      badge:     'Plancher · '+W+'×'+L+'m · '+surf+'m²',
-      optsLine:  nTravees+' travées | larg: '+comboStr+' | '+nPanTotal+' panneaux',
+      A, B: [],
+      des:      'Plancher ' + W + '×' + L + 'm',
+      surface:  surf,
+      badge:    'Plancher · ' + W + '×' + L + 'm · Pan. ' + pan.replace('.', ',') + 'm · ' + surf + 'm²',
+      optsLine: nTravees + ' travées | larg: ' + comboStr + ' | ' + nPanTotal + ' panneaux',
       nTravees, combo, comboStr, nPanTotal, tubeType, pan
     };
   }
