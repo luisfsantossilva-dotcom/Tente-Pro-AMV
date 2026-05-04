@@ -224,6 +224,13 @@ input:focus,select:focus{border-color:var(--red);background:#fff;box-shadow:0 0 
   body.pm-BON .rc.B{display:none!important;}
   body:not(.pm-LIV) .liv-block{display:none!important;}
   body.pm-LIV .rg{display:none!important;}
+  /* Plancher: show viz small + liste */
+  body.pm-PLANCHER #viz-wrap{display:block!important;max-height:150px;overflow:hidden;page-break-after:avoid;}
+  body.pm-PLANCHER #viz-wrap svg{max-height:145px;width:auto;}
+  body.pm-PLANCHER .topbar{display:none!important;}
+  body.pm-PLANCHER .rg{display:block;}
+  body.pm-PLANCHER .rc{page-break-inside:avoid;margin-bottom:8px;}
+  @page{size:A4;margin:12mm 14mm;}
 }
 .pchk{display:none;width:10pt;height:10pt;border:1.3pt solid #333;border-radius:2pt;vertical-align:middle;box-sizing:border-box;}
 .print-hdr{display:none;justify-content:space-between;align-items:flex-start;margin-bottom:12px;padding-bottom:10px;border-bottom:3px solid var(--red);}
