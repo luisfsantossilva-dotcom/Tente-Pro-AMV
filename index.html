@@ -7195,7 +7195,9 @@ const PLANCHER = {
     const panLarg = pan === '0.85' ? 0.85 : pan === '1' ? 1.0 : 0.5;
 
     // ── Tubes porteurs (sens largeur, 1 rangée tous les 2m) ──────────
-    const nTravees = Math.floor(L / 2) + 1;
+    // Règle: N panneaux de 2m → N+1 tubos (appui des 2 côtés)
+    const nPanneauxL = Math.ceil(L / 2);
+    const nTravees   = nPanneauxL + 1;
     const combo    = this.bestCombo(W, pan);
     const cnt      = this.comboCount(combo);
 
@@ -7254,8 +7256,8 @@ const PLANCHER = {
       des:      'Plancher ' + W + '×' + L + 'm',
       surface:  surf,
       badge:    'Plancher · ' + W + '×' + L + 'm · Pan. ' + pan.replace('.', ',') + 'm · ' + surf + 'm²',
-      optsLine: nTravees + ' travées | larg: ' + comboStr + ' | ' + nPanTotal + ' panneaux',
-      nTravees, combo, comboStr, nPanTotal, tubeType, pan
+      optsLine: nTravees + ' tubos (' + nPanneauxL + ' pan. × 2m + 1) | larg: ' + comboStr + ' | ' + nPanTotal + ' panneaux',
+      nTravees, nPanneauxL, combo, comboStr, nPanTotal, tubeType, pan
     };
   }
 };
@@ -7312,7 +7314,7 @@ function plancherParamsLeft(){
       <div style="background:var(--bg3);border-radius:7px;padding:8px 11px;font-size:11px;font-weight:700;color:var(--text2);line-height:2">
         🪵 ${S.plancherW} × ${S.plancherL} m = <strong style="color:var(--text);font-size:13px">${(S.plancherW*S.plancherL).toFixed(1)} m²</strong><br>
         <span style="font-size:10px;color:var(--text3)">
-          ${res.nTravees} travées (${S.plancherL}/2 + 1) &nbsp;·&nbsp; Larg: <b style="color:var(--text)">${res.comboStr}</b>
+          ${res.nTravees} tubes (${res.nPanneauxL} pan.×2m + 1) &nbsp;·&nbsp; Larg: <b style="color:var(--text)">${res.comboStr}</b>
         </span>
       </div>
     </div>
