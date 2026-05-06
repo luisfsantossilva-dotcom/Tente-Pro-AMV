@@ -774,8 +774,8 @@ const P240={
     const des=p.designation||tn+' tente(s) '+w+'×'+L+' – P240 – '+H+' – '+(sea==='hiver'?'HIVER':'ÉTÉ');
     // ── Chéneau ──
     const _ch240=cheneauBuildPieces(p);
-    Ar2=[...Ar2,..._ch240.A];
-    B=[...B,..._ch240.B];
+    Ar2.push(..._ch240.A);
+    B.push(..._ch240.B);
     return{A:Ar2,B,des,surface:w*L,N,modules:N+(remL>0?1:0),arceauxParTente:N+1+(remL>0?1:0),badge:'P240 · '+w+'×'+L+'m'+' · '+tn+' t. · '+H+' · '+(sea==='hiver'?'❄':'☀'),optsLine:'N='+N+(remL>0?' +1×'+remL+'m':'')+' | Arc/tente='+(N+1+(remL>0?1:0))+' | CabMod='+cm+' | Sab='+sab+' | HF='+hf,totalWeight:Ar2.reduce((s,r)=>s+wt(r.name)*r.qty,0),rideauTotals:{2:r2T,3:r3T,5:r5T},baches:bT,pignons:piT,remL};
   }
 };
@@ -881,8 +881,8 @@ const P334={
     const des=p.designation||('Tente '+w.replace('.',',')+'×'+len+'m – P334'+h334lbl+(season==='hiver'?' – HIVER':''));
     // ── Chéneau ──
     const _ch334=cheneauBuildPieces(p);
-    Ar=[...Ar,..._ch334.A];
-    B=[...B,..._ch334.B];
+    Ar.push(..._ch334.A);
+    B.push(..._ch334.B);
     return{A:Ar,B,des,surface:parseFloat(w)*len||0,modules:N+(remL334>0?1:0),badge:'P334 · '+w.replace('.',',')+'×'+len+'m'+' · '+h334+' · '+(season==='hiver'?'❄':'☀'),optsLine:'N='+N+(remL334>0?' +1×'+remL334+'m':'')+' | Arceaux='+(arc+(remL334>0?1:0))+' | H='+h334+' | Câble sets='+cs+(d.warn?' | ⚠ '+d.warn:''),totalWeight:Ar.reduce((s,r)=>s+wt(r.name)*r.qty,0),rideauTotals:{5:ri5T,2:ri2T,3:ri3T},baches:bacT,pignons:pigT,warning:d.warn?'⚠ '+d.warn:null,remL:remL334};
   }
 };
@@ -1790,7 +1790,7 @@ function paramsHTML(prof){
         <button class="tbtn \${S.piquetSize==='120'?'on':''}" onclick="setT('piquetSize','120',this)">120 cm</button>
       </div></div>
     </div>
-    \${cheneauHTML()}
+    ${cheneauHTML()}
     ${plancherZonesHTML()}`;
   if(prof==='p334') return `
     <div class="fr">
@@ -1831,7 +1831,7 @@ function paramsHTML(prof){
       📐 <b>Règle câbles P334</b> : max 15m entre positions câblées (3 modules)<br>
       <small>câble → sans → sans → sans → câble</small>
     </div>
-    \${cheneauHTML()}
+    ${cheneauHTML()}
     ${plancherZonesHTML()}`;
   if(prof==='commande') return `<div id="cmd-params-inner"></div>`;
   if(prof==='stock') return `<div id="stock-params-inner"></div>`;
