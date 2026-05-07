@@ -503,7 +503,7 @@ const P93={
   cCroix(m){return 2*(1+Math.floor((m-1)/4));},
   build(p){
     const L=+p.largeur||10,len=+p.longueur||12;
-    const H0=p.hauteur||'H3';const mH=String(H0).replace(',','.').match(/\d+(?:\.\d+)?/);
+    const H0=p.hauteur||'H2.3';const mH=String(H0).replace(',','.').match(/\d+(?:\.\d+)?/);
     const hn=mH?parseFloat(mH[0]):3;const H='H'+String(hn).replace(/\.0$/,'');
     const pIn=+p.pignonInter||0,p3=+p.portique3||0,p6=+p.portique6||0;
     const lum=p.lumiere||'avec',sab=p.sablieres==='oui',fix=p.fixation||'piquets';
@@ -1642,7 +1642,7 @@ function updateViz(res, p, ovA){
   let W2=0, L2=0, bay=3, barPos=[], hLabel='H3';
   if(prof==='p93'){
     W2=+(p.largeur||10); L2=+(p.longueur||12); bay=3;
-    hLabel=p.hauteur||'H3';
+    hLabel=p.hauteur||'H2.3';
   } else if(prof==='p240'){
     W2=+(p.width||20); L2=+(p.length||10); bay=5;
     hLabel=p.height||'H3';
@@ -1707,7 +1707,7 @@ function paramsHTML(prof){
     </div>
     <div class="fr">
       <div class="fg"><label>Hauteur</label>
-        <select id="hauteur"><option value="H2.3">H 2,3</option><option value="H3" selected>H 3</option><option value="H4">H 4</option></select>
+        <select id="hauteur"><option value="H2.3" selected>H 2,3</option><option value="H3">H 3</option><option value="H4">H 4</option></select>
       </div>
       <div class="fg"><label>Pignons intermédiaires</label><input id="pignonInter" type="number" value="${S.pignonInter||0}" min="0" oninput="S.pignonInter=+this.value;autoCalc()"></div>
     </div>
@@ -2616,7 +2616,7 @@ function calcAddToCommande(){
             : S.profile==='plancher' ? String(S.plancherL||20)
             : S.profile==='p240'     ? String(p.length||p.longueur)
             :                          String(p.longueur),
-    hauteur: S.profile==='p93'?(p.hauteur||'H3'):
+    hauteur: S.profile==='p93'?(p.hauteur||'H2.3'):
              S.profile==='p240'?(p.height||'H3'):
              S.profile==='p334'?(p.hauteur334||'H4'):
              S.profile==='pontdanse'?(p.hauteurPD||'H80'):'',
