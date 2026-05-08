@@ -697,20 +697,23 @@ const P240={
     const pm=this.PM[w];
     const tL=((sea==='hiver')?pm.th:pm.te)*N*tn;const t6=((sea==='hiver')?pm.s6h:pm.s6e)*N*tn;
     const t12=pm.t12*N*tn;const bol=((sea==='hiver')?pm.bh:pm.be)*N*tn;
-    // Rideaux: décomposition correcte pignon vs modules intérieurs
-    // f.r5 = total pour 2 pignons + arcs intérieurs (base sans pIn)
-    // Arcs intérieurs = N-1, chacun contribue 2 rideaux (1 par côté)
-    // Par pignon: (f.r5 - 2*(N-1)) / 2 rideaux
-    const _pF=(2+pIn)/2; // pignon factor (pour tubes, barres)
-    const _r5modInt=2*(N-1)*tn;                         // rideaux arcs intérieurs
-    const _r5perPig=(f.r5-2*(N-1))/2;                  // rideaux par pignon
-    const r5T=Math.round(_r5modInt + _r5perPig*(2+pIn)*tn);
+    // Rideaux P240:
+    // Règle Luis: rideaux_pignon + rideaux_modules
+    //   rideaux_pignon = r_pig × (2+pIn)  où r_pig = (f.r5-2)/2
+    //   rideaux_modules = N × 2  (2 rideaux par module, 1 par côté)
+    //   f.r5 est la base pour N=1 (5m, 2 pignons sans module intérieur)
+    // r5T = (f.r5-2)/2 × (2+pIn) + N × 2
+    // Ex: 20×10m: (10-2)/2×2 + 2×2 = 8+4 = 12 ✓
+    // Ex: 20×15m: (10-2)/2×2 + 3×2 = 8+6 = 14 ✓
+    const _pF=(2+pIn)/2; // pignon factor (pour tubes, barres structuraux)
+    const _r5perPig=(f.r5-2)/2;                         // rideaux par pignon
+    const r5T=Math.round(_r5perPig*(2+pIn)*tn + N*2*tn);
     const r2T=Math.round(f.r2p*tn*_pF);
     const r3T=Math.round(f.r3p*tn*_pF);
     const bT=N*tn;
-    const _t5modInt=2*(N-1)*tn;
-    const _t5perPig=(f.t5-2*(N-1))/2;
-    const ten5=Math.round(_t5modInt + _t5perPig*(2+pIn)*tn);
+    // Barres tension: même logique
+    const _t5perPig=(f.t5-2)/2;
+    const ten5=Math.round(_t5perPig*(2+pIn)*tn + N*2*tn);
     const ten2=Math.round(f.t2p*tn*_pF);
     const ten3=Math.round(f.t3p*tn*_pF);
     // ptT: base ptb covers 2 pignons + 2 per additional module
