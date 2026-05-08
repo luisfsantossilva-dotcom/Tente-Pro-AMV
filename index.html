@@ -697,16 +697,22 @@ const P240={
     const pm=this.PM[w];
     const tL=((sea==='hiver')?pm.th:pm.te)*N*tn;const t6=((sea==='hiver')?pm.s6h:pm.s6e)*N*tn;
     const t12=pm.t12*N*tn;const bol=((sea==='hiver')?pm.bh:pm.be)*N*tn;
-    // Rideaux: scale pignon contribution by (2+pIn)/2
-    const _rpF=(2+pIn)/2; // rideau pignon factor
-    const r5T=Math.round(((f.r5-2)*_rpF+2*N)*tn);
-    const r2T=Math.round(f.r2p*tn*_rpF);
-    const r3T=Math.round(f.r3p*tn*_rpF);
+    // Rideaux: décomposition correcte pignon vs modules intérieurs
+    // f.r5 = total pour 2 pignons + arcs intérieurs (base sans pIn)
+    // Arcs intérieurs = N-1, chacun contribue 2 rideaux (1 par côté)
+    // Par pignon: (f.r5 - 2*(N-1)) / 2 rideaux
+    const _pF=(2+pIn)/2; // pignon factor (pour tubes, barres)
+    const _r5modInt=2*(N-1)*tn;                         // rideaux arcs intérieurs
+    const _r5perPig=(f.r5-2*(N-1))/2;                  // rideaux par pignon
+    const r5T=Math.round(_r5modInt + _r5perPig*(2+pIn)*tn);
+    const r2T=Math.round(f.r2p*tn*_pF);
+    const r3T=Math.round(f.r3p*tn*_pF);
     const bT=N*tn;
-    const ten5=Math.round(((f.t5-2)*_rpF+2*N)*tn);
-    const ten2=Math.round(f.t2p*tn*_rpF);
-    const ten3=Math.round(f.t3p*tn*_rpF);
-    const _pF=(2+pIn)/2; // pignon factor — must be defined before use
+    const _t5modInt=2*(N-1)*tn;
+    const _t5perPig=(f.t5-2*(N-1))/2;
+    const ten5=Math.round(_t5modInt + _t5perPig*(2+pIn)*tn);
+    const ten2=Math.round(f.t2p*tn*_pF);
+    const ten3=Math.round(f.t3p*tn*_pF);
     // ptT: base ptb covers 2 pignons + 2 per additional module
     // Per extra pignon intermédiaire: ptb/2 additional (1 plaque de base)
     const ptT=Math.round((f.ptb+2*(N-1))*tn + (f.ptb/2)*pIn*tn);
@@ -772,6 +778,9 @@ const P240={
     const remStr=remL>0?(' + 1×'+remL+'m'):'';
     const Ar2=[...A.entries()].map(([n,q])=>({name:n,qty:q})).sort((a,b)=>oi(a.name)-oi(b.name));
     const des=p.designation||tn+' tente(s) '+w+'×'+L+' – P240 – '+H+' – '+(sea==='hiver'?'HIVER':'ÉTÉ');
+    // ── Tube rond 5m sans pipo pour chaque rideau sortie de secours ──
+    const _secP240 = +p.r5_secours||0;
+    if(_secP240>0) Ar2.push({name:'Tube rond 5m sans pipo', qty:_secP240, detail:_secP240+' sortie'+(+_secP240>1?'s':'')+' de secours'});
     // ── Chéneau ──
     const _ch240=cheneauBuildPieces(p);
     Ar2.push(..._ch240.A);
@@ -879,6 +888,9 @@ const P334={
     const h334lbl=h334==='H6'?' – H6':'';
     const remStr334=remL334>0?' + 1×'+remL334+'m':'';
     const des=p.designation||('Tente '+w.replace('.',',')+'×'+len+'m – P334'+h334lbl+(season==='hiver'?' – HIVER':''));
+    // ── Tube rond 5m sans pipo pour chaque rideau sortie de secours ──
+    const _secP334 = +p.ri5_secours||0;
+    if(_secP334>0) Ar.push({name:'Tube rond 5m sans pipo', qty:_secP334, detail:_secP334+' sortie'+(+_secP334>1?'s':'')+' de secours'});
     // ── Chéneau ──
     const _ch334=cheneauBuildPieces(p);
     Ar.push(..._ch334.A);
