@@ -772,13 +772,15 @@ const P240={
     if(pSp.blanc>0)B.push({name:pgl+' – Blanc',qty:pSp.blanc,color:'blanc'});
     if(pSp.noir>0)B.push({name:pgl+' – Noir',qty:pSp.noir,color:'noir'});
     if(pSp.cristal>0)B.push({name:pgl+' – Cristal',qty:pSp.cristal,color:'cristal'});
-    // Pignons INTERMÉDIAIRES: triangle + rideaux dans leur couleur
+    // Pignons INTERMÉDIAIRES: triangle + rideaux dans leur couleur (blanc/noir/cristal)
     _pigColors.forEach(col=>{
+      const colLabel=col==='cristal'?'Cristal':col==='noir'?'Noir':'Blanc';
       // Triangle pignon inter
-      B.push({name:pgl+' – '+(col==='cristal'?'Cristal':'Noir'),qty:tn,color:col});
+      const exPig=B.find(b=>b.name===pgl+' – '+colLabel);
+      if(exPig) exPig.qty+=tn; else B.push({name:pgl+' – '+colLabel,qty:tn,color:col});
       // Rideaux du pignon inter
       if(_rPig>0){
-        const rname='Rideau 5m – '+(col==='cristal'?'Cristal':'Noir');
+        const rname='Rideau 5m – '+colLabel;
         const ex=B.find(b=>b.name===rname);
         if(ex) ex.qty+=_rPig*tn;
         else B.push({name:rname,qty:_rPig*tn,color:col});
@@ -904,11 +906,13 @@ const P334={
       addB(d.bache,bacT,p.b_mode,p.b_noir,p.b_cristal,null),
       addB(d.pignLabel,pigBaseT334,p.p_mode,p.p_noir,p.p_cristal,null)
     ].filter(e=>e&&e.error);
-    // Pignons inter P334: triangle + rideaux dans leur couleur
+    // Pignons inter P334: triangle + rideaux dans leur couleur (blanc/noir/cristal)
     _pigColorsP334.forEach(col=>{
-      B.push({name:d.pignLabel+' – '+(col==='cristal'?'Cristal':'Noir'),qty:1,color:col});
+      const colLabel=col==='cristal'?'Cristal':col==='noir'?'Noir':'Blanc';
+      const exPig=B.find(b=>b.name===d.pignLabel+' – '+colLabel);
+      if(exPig) exPig.qty+=1; else B.push({name:d.pignLabel+' – '+colLabel,qty:1,color:col});
       if(_rPigP334>0){
-        const rname='Rideau 5m – '+(col==='cristal'?'Cristal':'Noir');
+        const rname='Rideau 5m – '+colLabel;
         const ex=B.find(b=>b.name===rname);
         if(ex) ex.qty+=_rPigP334; else B.push({name:rname,qty:_rPigP334,color:col});
       }
@@ -2162,7 +2166,7 @@ function syncPigInterColors(){
   const n = +S.pignonInter||0;
   if(!S.pigInterColors) S.pigInterColors=[];
   // Ajouter des entrées si pIn a augmenté
-  while(S.pigInterColors.length < n) S.pigInterColors.push('noir');
+  while(S.pigInterColors.length < n) S.pigInterColors.push('blanc');
   // Tronquer si pIn a diminué
   S.pigInterColors = S.pigInterColors.slice(0,n);
 }
@@ -2173,8 +2177,10 @@ function pigInterColorsHTML(){
   if(n<=0) return '';
   if(!S.pigInterColors||S.pigInterColors.length!==n) syncPigInterColors();
   const rows = S.pigInterColors.map((col,i)=>`
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-      <span style="font-size:10px;font-weight:700;color:var(--text2);min-width:80px">Pignon int. ${i+1}</span>
+    <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">
+      <span style="font-size:10px;font-weight:700;color:var(--text2);min-width:76px">Pignon int. ${i+1}</span>
+      <button class="tbtn ${col==='blanc'?'on':''}"
+        onclick="S.pigInterColors[${i}]='blanc';$('params-body').innerHTML=paramsHTML(S.profile);bindInputs();autoCalc()">⬜ Blanc</button>
       <button class="tbtn ${col==='noir'?'on':''}"
         style="${col==='noir'?'background:#1e293b;border-color:#1e293b;color:#fff':''}"
         onclick="S.pigInterColors[${i}]='noir';$('params-body').innerHTML=paramsHTML(S.profile);bindInputs();autoCalc()">🖤 Noir</button>
