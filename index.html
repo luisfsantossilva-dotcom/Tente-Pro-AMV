@@ -2140,6 +2140,39 @@ function plancherZonesHTML(){
 
 function rideauxHTML(prof){
   const note='<div style="font-size:11px;color:var(--text3);margin-bottom:8px">Blanc = calculé auto. Entrez uniquement les quantités non-blanches.</div>';
+  // ── Bloc "Modules par couleur" ───────────────────────────────────
+  // 1 module = 1 bâche + 2 rideaux (du profil principal)
+  // Blanc = N - noir - cristal (calculé auto)
+  const modNoirBloc=`
+    <div class="rbox" style="border-color:#334155;background:#f8fafc">
+      <div class="rbox-hdr" style="background:#33415520;border-bottom:1px solid #33415530">
+        <span class="rbox-name" style="color:#1e293b">🎨 Modules par couleur</span>
+        <span class="rbox-total" id="mod-color-preview" style="background:#33415515;color:#475569;border-color:#33415530">—</span>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.6">
+        1 module = 1 bâche + 2 rideaux · Blanc = N − noir − cristal
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <label style="font-size:10px;font-weight:800;color:#1e293b;display:flex;align-items:center;gap:4px">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#1e293b"></span>Modules Noir
+          </label>
+          <input id="mod_noir_nb" type="number" min="0" value="0"
+            oninput="applyModulesCouleur();autoCalc()"
+            style="width:100%;text-align:center;padding:5px 6px;border:1.5px solid #1e293b50;border-radius:5px;font-size:15px;font-weight:800;font-family:var(--font);color:#1e293b">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <label style="font-size:10px;font-weight:800;color:#0369a1;display:flex;align-items:center;gap:4px">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#93c5fd"></span>Modules Cristal
+          </label>
+          <input id="mod_cristal_nb" type="number" min="0" value="0"
+            oninput="applyModulesCouleur();autoCalc()"
+            style="width:100%;text-align:center;padding:5px 6px;border:1.5px solid #93c5fd;border-radius:5px;font-size:15px;font-weight:800;font-family:var(--font);color:#0369a1">
+        </div>
+      </div>
+      <div id="mod-color-detail" style="font-size:10px;color:#64748b;min-height:14px;line-height:1.6"></div>
+      <div id="mod-color-warn" style="font-size:10px;color:#dc2626;font-weight:700;display:none;margin-top:3px"></div>
+    </div>`;
   const makeSZ=(sz,hasSec,sizes)=>`
     <div class="rbox">
       <div class="rbox-hdr"><span class="rbox-name">Rideau ${sz} m</span><span class="rbox-total" id="r${sz}-tot">—</span></div>
@@ -2183,9 +2216,9 @@ function rideauxHTML(prof){
         <div class="ci"><div class="cdot noir"></div><div class="clabel">Noir</div><input id="${id}_noir" type="number" value="0" min="0" oninput="autoCalc()"></div>
         <div class="ci"><div class="cdot cristal"></div><div class="clabel">Cristal</div><input id="${id}_cristal" type="number" value="0" min="0" oninput="autoCalc()"></div>
         <div></div><div></div></div></div>`;
-  if(prof==='p93') return note+makeSZ(2,false)+makeSZ(3,true)+makeSZ(4,true)+makeSZ(5,false)+pigBac('p','Pignons','pig-tot')+pigBac('b','Bâches','bac-tot');
-  if(prof==='p240') return note+makeSZ(2,false)+makeSZ(3,true)+makeSZ(5,true)+pigBac('p','Pignons','pig-tot')+pigBac('b','Bâches','bac-tot');
-  if(prof==='p334') return note+`
+  if(prof==='p93') return note+modNoirBloc+makeSZ(2,false)+makeSZ(3,true)+makeSZ(4,true)+makeSZ(5,false)+pigBac('p','Pignons','pig-tot')+pigBac('b','Bâches','bac-tot');
+  if(prof==='p240') return note+modNoirBloc+makeSZ(2,false)+makeSZ(3,true)+makeSZ(5,true)+pigBac('p','Pignons','pig-tot')+pigBac('b','Bâches','bac-tot');
+  if(prof==='p334') return note+modNoirBloc+`
     <div class="rbox">
       <div class="rbox-hdr"><span class="rbox-name">Rideau 5 m</span><span class="rbox-total" id="r5-tot">—</span></div>
       <div class="rbox-base">
@@ -2249,6 +2282,7 @@ function rideauxHTML(prof){
 function switchProfile(prof, tabEl){
   S.profile = prof;
   S.pignonInter = 0; // reset on profile change
+  setTimeout(resetModulesNoir, 100);
   document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
   if(tabEl) tabEl.classList.add('active');
   $('params-body').innerHTML = paramsHTML(prof);
@@ -2496,6 +2530,8 @@ function autoCalc(){
     if(p.b_baseOv!==undefined) applyBaseOv('Bâche',p.b_baseOv);
   }
   LAST = res;
+  // Actualiser le preview modules couleur
+  if(document.getElementById('mod_noir_nb')) applyModulesCouleur();
 
   // Apply overrides
   const A = res.A.map(r=>OV[r.name]!==undefined?{...r,qty:OV[r.name],ov:true}:r);
@@ -2653,6 +2689,89 @@ function getBase(baseId, calcVal){
 }
 function setCalcLabel(calcId, calcVal){
   const el=$(calcId); if(el) el.textContent='calc: '+calcVal;
+}
+
+/* ══════════════════════════════════════
+   MODULES PAR COULEUR — P93 / P240 / P334
+   Noir + Cristal → blanc = N - noir - cristal
+   1 module = 1 bâche + 2 rideaux principal
+     P93:  r3_noir / r3_cristal (rideau 3m = module)
+     P240: r5_noir / r5_cristal (rideau 5m)
+     P334: ri5_noir / ri5_cristal (rideau 5m)
+══════════════════════════════════════ */
+function applyModulesCouleur(){
+  const nNoir    = Math.max(0, +(document.getElementById('mod_noir_nb')?.value)||0);
+  const nCristal = Math.max(0, +(document.getElementById('mod_cristal_nb')?.value)||0);
+  const prof     = S.profile;
+
+  // Bâches
+  const bNoir    = document.getElementById('b_noir');
+  const bCristal = document.getElementById('b_cristal');
+  if(bNoir)    bNoir.value    = nNoir;
+  if(bCristal) bCristal.value = nCristal;
+
+  // Rideaux principaux (2 par module)
+  const rNoir    = nNoir    * 2;
+  const rCristal = nCristal * 2;
+
+  if(prof==='p93'){
+    const r3n = document.getElementById('r3_noir');
+    const r3c = document.getElementById('r3_cristal');
+    if(r3n) r3n.value = rNoir;
+    if(r3c) r3c.value = rCristal;
+  } else if(prof==='p240'){
+    const r5n = document.getElementById('r5_noir');
+    const r5c = document.getElementById('r5_cristal');
+    if(r5n) r5n.value = rNoir;
+    if(r5c) r5c.value = rCristal;
+  } else if(prof==='p334'){
+    const ri5n = document.getElementById('ri5_noir');
+    const ri5c = document.getElementById('ri5_cristal');
+    if(ri5n) ri5n.value = rNoir;
+    if(ri5c) ri5c.value = rCristal;
+  }
+
+  // Preview et validation
+  const prev = document.getElementById('mod-color-preview');
+  const det  = document.getElementById('mod-color-detail');
+  const warn = document.getElementById('mod-color-warn');
+
+  // Calculer N total modules depuis LAST
+  let N = 0;
+  if(LAST){
+    if(prof==='p93')       N = LAST.modules || 0;
+    else if(prof==='p240') N = LAST.N        || 0;
+    else if(prof==='p334') N = LAST.modules  || 0;
+  }
+
+  const nBlanc = Math.max(0, N - nNoir - nCristal);
+  const total  = nNoir + nCristal;
+
+  if(prev) prev.textContent = total>0 ? total+' mod. coloré'+(total>1?'s':'') : '—';
+  if(det)  det.innerHTML = total>0
+    ? (nNoir>0    ? '<b style="color:#1e293b">'+nNoir+' noir</b> ('+nNoir+' bâche + '+rNoir+' rid.) ' : '')
+    + (nCristal>0 ? '<b style="color:#0369a1">'+nCristal+' cristal</b> ('+nCristal+' bâche + '+rCristal+' rid.) ' : '')
+    + '<b style="color:#64748b">'+nBlanc+' blanc</b>'
+    : '';
+
+  // Avertissement si total > N
+  if(warn){
+    if(N>0 && (nNoir+nCristal) > N){
+      warn.textContent = '⚠ Total ('+( nNoir+nCristal)+') > N modules ('+N+')';
+      warn.style.display='block';
+    } else {
+      warn.style.display='none';
+    }
+  }
+}
+
+// Reset modules couleur quand on change de profil
+function resetModulesNoir(){
+  const en = document.getElementById('mod_noir_nb');
+  const ec = document.getElementById('mod_cristal_nb');
+  if(en) en.value = 0;
+  if(ec) ec.value = 0;
+  applyModulesCouleur();
 }
 
 function updateBadges(res,p){
