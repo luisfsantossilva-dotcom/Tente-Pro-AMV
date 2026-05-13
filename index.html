@@ -887,7 +887,10 @@ const P334={
     addA('Plaque de base P240',d.plaqP240[0]+d.plaqP240[1]*(N-1)+plaqPerPig*pIn);
     addA('Goupille L P240',d.plaqP240[0]+d.plaqP240[1]*(N-1)+plaqPerPig*pIn);
     // Barres tension bâche: scale avec pIn (bt[1] par pignon inter)
-    addA('Barre tension bâche 5m', d.bt5[0]+d.bt5[1]*(N-1)+d.bt5[1]*pIn);
+    // bt5: base sans pIn = bt5[0]+bt5[1]*(N-1), per_pig_bt5 = (bt5[0]-2)/2
+    // +pIn: même per_pig que ri5 = (ri5[0]-2)/2
+    const per_pig_bt5 = (d.ri5[0]-2)/2;
+    addA('Barre tension bâche 5m', d.bt5[0]+d.bt5[1]*(N-1) + per_pig_bt5*pIn);
     if(d.bt2) addA('Barre tension bâche 2m', d.bt2 + (d.bt2per||d.bt5[1])*pIn);
     if(d.bt3) addA('Barre tension bâche 3m', d.bt3[0]+d.bt3[1]*(N-1)+d.bt3[1]*pIn);
     addA('Piquet noir',8); // fixe: 8 piquets noirs (pignon de base)
