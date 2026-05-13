@@ -921,8 +921,11 @@ const P334={
     addA('Câble 46m (6872mm)',d.cab46*cs);if(d.cabRally)addA(d.cabRally[0],d.cabRally[1]*cs);
     // Rideaux P334: ri5[0] includes 2 pignons base → scale pignon part
     // ri5T: (2+pIn) pignons × per_pig_ri5 rideaux + modules contribution
-    const per_pig_ri5=(d.ri5[0]-2)/2;
-    const ri5T=Math.round((2+pIn)*per_pig_ri5 + d.ri5[1]*(N-1));
+    // ri5T = ri5[1]*N + per_pig_ri5*(2+pIn)
+    // per_pig_ri5 = (ri5[0]-ri5[1])/2  — rideaux par pignon
+    // Ex: 40,38m sans pIn: 2*18 + 8*2 = 52 | avec pIn=1: 2*18 + 8*3 = 60
+    const per_pig_ri5=(d.ri5[0]-d.ri5[1])/2;
+    const ri5T=d.ri5[1]*N + per_pig_ri5*(2+pIn);
     const ri2T=Math.round((d.ri2||0)/2*(2+pIn));   // ri2/2 per pignon × (2+pIn)
     const ri3T=Math.round((d.ri3pig||0)/2*(2+pIn)); // ri3pig/2 per pignon × (2+pIn)
     const bacT=N,pigT=2+pIn;
@@ -930,7 +933,7 @@ const P334={
     // Pignons base (2) séparés des pignons inter pour P334
     const _pigColorsP334=p.pigInterColors||[];
     const _rPigP334=Math.round(per_pig_ri5); // rideaux par pignon
-    const ri5T_base=Math.round(per_pig_ri5*2 + d.ri5[1]*(N-1)); // base sans pIgnons inter
+    const ri5T_base=d.ri5[1]*N + per_pig_ri5*2; // base sans pIgnons inter
     const pigBaseT334=2*1; // 2 pignons de base
     const errs=[
       addB('Rideau 5m',ri5T_base,p.ri5_mode,p.ri5_noir,p.ri5_cristal,p.ri5_fenetre,p.ri5_secours),
