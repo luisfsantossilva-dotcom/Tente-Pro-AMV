@@ -886,8 +886,10 @@ const P334={
     // plaqPerPig defined above
     addA('Plaque de base P240',d.plaqP240[0]+d.plaqP240[1]*(N-1)+plaqPerPig*pIn);
     addA('Goupille L P240',d.plaqP240[0]+d.plaqP240[1]*(N-1)+plaqPerPig*pIn);
-    addA('Barre tension bâche 5m',d.bt5[0]+d.bt5[1]*(N-1));
-    if(d.bt2)addA('Barre tension bâche 2m',d.bt2);
+    // Barres tension bâche: scale avec pIn (bt[1] par pignon inter)
+    addA('Barre tension bâche 5m', d.bt5[0]+d.bt5[1]*(N-1)+d.bt5[1]*pIn);
+    if(d.bt2) addA('Barre tension bâche 2m', d.bt2 + (d.bt2per||d.bt5[1])*pIn);
+    if(d.bt3) addA('Barre tension bâche 3m', d.bt3[0]+d.bt3[1]*(N-1)+d.bt3[1]*pIn);
     addA('Piquet noir',8); // fixe: 8 piquets noirs (pignon de base)
     // Barres fermeture: scale by _pF334
     if(dp.bferm4)addA('Barre fermeture 4m',Math.round(dp.bferm4*_pF334));
@@ -6920,7 +6922,7 @@ function stockExportMvtCSV(){
 }
 
 
-function renderMobilierStock(){
+async function renderMobilierStock(){
   // Standalone Mobilier tab — catalogue complet + ajout stock
   let panel = document.getElementById('mob-right-panel');
   if(!panel){
@@ -6935,7 +6937,7 @@ function renderMobilierStock(){
   if(!panel) return;
   panel.style.display = 'block';
 
-  const stock = mobGetStock();
+  const stock = await mobGetStock();
   const total = stock.reduce((s,m)=>s+(+m.qty||0),0);
 
   let h = '';
