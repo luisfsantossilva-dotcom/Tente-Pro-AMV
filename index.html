@@ -5107,6 +5107,11 @@ function cmdSaveDraft(patch){
 }
 
 
+function renderChantierGlobal(){
+  const inner=document.getElementById('chantier-global-inner');
+  if(inner){ inner.innerHTML=chantierLeft(); bindInputs(); }
+}
+
 function renderCommande(){
   const inner=document.getElementById('cmd-params-inner');
   if(inner){ inner.innerHTML=chantierLeft(); bindInputs(); }
