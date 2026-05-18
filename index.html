@@ -5178,39 +5178,34 @@ function chantierLeft(){
   const ch=chGetActive();
   const rec=CH_DATA.slice(0,5);
   return `
-    <div style="margin-bottom:0">
+    <div>
       <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:7px">Chantier &amp; Client</div>
       <div style="display:flex;gap:5px;margin-bottom:8px">
-        <button onclick="chNewChantier()" style="flex:1;padding:4px;border-radius:var(--r);border:1.5px solid #7f1d1d;background:#7f1d1d;color:#fff;cursor:pointer;font-size:10.5px;font-weight:700;font-family:var(--font);text-align:center">✚ Nouveau</button>
-        <button onclick="chShowSearch()" style="flex:1;padding:4px;border-radius:var(--r);border:1.5px solid var(--border2);background:var(--bg);cursor:pointer;font-size:10.5px;font-weight:700;font-family:var(--font);color:var(--text2)">🔍 Rechercher</button>
-        <button onclick="chAddCurrentToChantier(S.profile)" style="flex:1;padding:4px;border-radius:var(--r);border:1.5px solid var(--border2);background:var(--bg);cursor:pointer;font-size:10.5px;font-weight:700;font-family:var(--font);color:var(--text2)">⊕ Ajouter</button>
+        <button onclick="chNewChantier()" style="flex:1;padding:4px;border-radius:var(--r);border:1.5px solid #7f1d1d;background:#7f1d1d;color:#fff;cursor:pointer;font-size:10.5px;font-weight:700;font-family:var(--font);text-align:center;line-height:1.4"><span style="font-size:12px;display:block">✚</span>Nouveau</button>
+        <button onclick="chShowSearch()" style="flex:1;padding:4px;border-radius:var(--r);border:1.5px solid var(--border2);background:var(--bg);cursor:pointer;font-size:10.5px;font-weight:700;font-family:var(--font);color:var(--text2);line-height:1.4"><span style="font-size:12px;display:block">🔍</span>Rechercher</button>
+        <button onclick="chAjouterType(S.profile)" style="flex:1;padding:4px;border-radius:var(--r);border:1.5px solid var(--border2);background:var(--bg);cursor:pointer;font-size:10.5px;font-weight:700;font-family:var(--font);color:var(--text2);line-height:1.4"><span style="font-size:12px;display:block">⊕</span>Ajouter</button>
       </div>
-
       <div style="padding:7px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px">
         <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:4px">5 derniers chantiers</div>
         ${rec.map(d=>`
-          <div onclick="chSel('${d.id}');renderCommande()" style="display:flex;align-items:center;gap:6px;padding:3px 5px;border-radius:5px;cursor:pointer;transition:.15s;" onmouseover="this.style.background='rgba(185,28,28,.09)'" onmouseout="this.style.background='transparent'">
-            <div style="width:5px;height:5px;border-radius:50%;background:${d.id===CH_AID?'var(--red)':'var(--border2)'};flex-shrink:0;"></div>
-            <span style="font-size:11.5px;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.nom}</span>
-            <span style="font-size:10px;color:var(--text3)">${d.ref}</span>
+          <div onclick="chSel('${d.id}');renderChantierGlobal()" style="display:flex;align-items:center;gap:6px;padding:3px 5px;border-radius:5px;cursor:pointer" onmouseover="this.style.background='rgba(185,28,28,.09)'" onmouseout="this.style.background='transparent'">
+            <div style="width:5px;height:5px;border-radius:50%;background:${d.id===CH_AID?'var(--red)':'var(--border2)'};flex-shrink:0"></div>
+            <span style="font-size:11.5px;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.nom||'(sans nom)'}</span>
+            <span style="font-size:10px;color:var(--text3)">${d.ref||''}</span>
           </div>`).join('')}
       </div>
-
       <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:9px;display:flex;align-items:center;gap:5px">
         <div style="background:rgba(185,28,28,.09);color:var(--red);border:1px solid rgba(185,28,28,.2);border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">1</div>
         Chantier sélectionné
       </div>
-
-      <div style="margin-bottom:7px">
-        <div style="display:flex;gap:7px">
-          <div style="flex:2">
-            <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Chantier / Objet</label>
-            <input id="ch-nom" value="${esc(ch?.nom||'')}" placeholder="Nom du chantier" oninput="chUpdateField('nom',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;color:var(--text);font-size:12.5px;font-family:var(--font);width:100%;outline:none">
-          </div>
-          <div style="flex:1">
-            <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Réf.</label>
-            <input id="ch-ref" value="${esc(ch?.ref||'')}" placeholder="AJ/25" oninput="chUpdateField('ref',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;color:var(--text);font-size:12.5px;font-family:var(--font);width:100%;outline:none">
-          </div>
+      <div style="display:flex;gap:7px;margin-bottom:7px">
+        <div style="flex:2">
+          <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Chantier / Objet</label>
+          <input id="ch-nom" value="${esc(ch?.nom||'')}" placeholder="Nom du chantier" oninput="chUpdateField('nom',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;color:var(--text);font-size:12.5px;font-family:var(--font);width:100%;outline:none">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Réf.</label>
+          <input id="ch-ref" value="${esc(ch?.ref||'')}" placeholder="AJ/25" oninput="chUpdateField('ref',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;color:var(--text);font-size:12.5px;font-family:var(--font);width:100%;outline:none">
         </div>
       </div>
       <div style="margin-bottom:7px">
@@ -5227,7 +5222,7 @@ function chantierLeft(){
       <div style="margin-bottom:7px">
         <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Adresse</label>
         <input id="ch-addr" value="${esc(ch?.addr||'')}" placeholder="Rue, CP Ville" oninput="chUpdateField('addr',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;color:var(--text);font-size:12.5px;font-family:var(--font);width:100%;outline:none">
-        ${ch?.addr?`<a href="https://www.google.com/maps/search/${encodeURIComponent(ch.addr)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--blue);text-decoration:none;margin-top:3px;font-weight:600"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Google Maps</a>`:''}
+        ${ch?.addr?`<a href="https://www.google.com/maps/search/${encodeURIComponent(ch.addr)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:#2563eb;text-decoration:none;margin-top:3px;font-weight:600"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Google Maps</a>`:''}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px">
         <div>
@@ -5247,19 +5242,20 @@ function chantierLeft(){
         <button onclick="chSaveChantier()" style="flex:2;padding:7px;border-radius:var(--r);border:1.5px solid #7f1d1d;background:#7f1d1d;color:#fff;cursor:pointer;font-size:11.5px;font-weight:700;font-family:var(--font)">💾 Enregistrer</button>
         <button onclick="chCancelEdit()" style="flex:1;padding:7px;border-radius:var(--r);border:1.5px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;font-size:11.5px;font-weight:700;font-family:var(--font)">✕</button>
       </div>
-
       ${chMiniResumo(ch)}
     </div>`;
 }
 
 function chMiniResumo(ch){
-  if(!ch||!ch.configs||!ch.configs.length) return '';
+  if(!ch) return '';
+  const configs=ch.configs||[];
   const cats=[
-    {lbl:'Tentes',col:'#d97706',items:ch.configs.filter(x=>['p93','p240','p334','pontdanse','pagode'].includes(x.type)),cls:'t',tagFn:x=>x.label.split('—')[0].trim()},
-    {lbl:'Plancher',col:'#2563eb',items:ch.configs.filter(x=>x.type==='plancher'),cls:'p',tagFn:x=>'Plan.'},
-    {lbl:'Containers',col:'#059669',items:ch.configs.filter(x=>x.type==='container'),cls:'c',tagFn:x=>'Cont.'},
+    {lbl:'Tentes',col:'#d97706',cls:'t',items:configs.filter(x=>['p93','p240','p334','pontdanse','pagode'].includes(x.type))},
+    {lbl:'Plancher',col:'#2563eb',cls:'p',items:configs.filter(x=>x.type==='plancher')},
+    {lbl:'Containers',col:'#059669',cls:'c',items:configs.filter(x=>x.type==='container')},
   ].filter(cat=>cat.items.length);
   if(!cats.length) return '';
+  const tagColors={t:'background:#fef3c7;color:#92400e',p:'background:#dbeafe;color:#1e40af',c:'background:#d1fae5;color:#065f46'};
   return `<div style="margin-top:10px">
     <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:6px">Contenu<span style="flex:1;height:1px;background:var(--border);display:block"></span></div>
     ${cats.map(cat=>`
@@ -5269,9 +5265,9 @@ function chMiniResumo(ch){
           <span style="font-size:9px;background:var(--bg4);padding:0 5px;border-radius:8px;color:var(--text2)">${cat.items.length}</span>
         </div>
         ${cat.items.map(it=>`
-          <div onclick="chOpenConfig(${JSON.stringify(it).replace(/"/g,'&quot;').replace(/'/g,"\'")})" style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;margin-bottom:2px;transition:.12s" onmouseover="this.style.borderColor='var(--red)';this.style.background='rgba(185,28,28,.09)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg3)'">
+          <div onclick="chOpenConfig(${JSON.stringify(it).replace(/"/g,'&quot;')})" style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;margin-bottom:2px" onmouseover="this.style.borderColor='var(--red)';this.style.background='rgba(185,28,28,.09)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg3)'">
             <span style="font-size:11.5px;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.label)}</span>
-            <span style="font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:9px;background:${cat.cls==='t'?'#fef3c7':cat.cls==='p'?'#dbeafe':'#d1fae5'};color:${cat.cls==='t'?'#92400e':cat.cls==='p'?'#1e40af':'#065f46'}">${cat.tagFn(it)}</span>
+            <span style="font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:9px;${tagColors[cat.cls]||''}">${it.label.split(' ')[0]}</span>
             <span style="font-size:10px;color:var(--text3)">↗</span>
           </div>`).join('')}
         <button onclick="chAjouter('${cat.lbl}')" style="display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:6px;border:1.5px dashed var(--border2);background:transparent;color:var(--text3);font-size:10.5px;font-weight:700;cursor:pointer;font-family:var(--font);width:100%;margin-top:2px">+ Ajouter</button>
@@ -5279,7 +5275,6 @@ function chMiniResumo(ch){
   </div>`;
 }
 
-// ── RIGHT PANEL ────────────────────────────────────────────
 function chantierRight(){
   const ch=chGetActive();
   if(!ch) return `<div style="padding:32px 20px;text-align:center;color:var(--text3)">
@@ -5287,7 +5282,6 @@ function chantierRight(){
     <div style="font-size:14px;font-weight:700;margin-bottom:6px">Aucun chantier sélectionné</div>
     <div style="font-size:12px">Créez un nouveau chantier ou sélectionnez-en un dans la liste</div>
   </div>`;
-
   const od=ch.out?ch.out.split('-').reverse().join('.'):'—';
   const id2=ch.in?ch.in.split('-').reverse().join('.'):'—';
   const days=ch.out&&ch.in?Math.round((new Date(ch.in)-new Date(ch.out))/86400000):0;
@@ -5295,91 +5289,79 @@ function chantierRight(){
   const tentes=configs.filter(x=>['p93','p240','p334','pontdanse','pagode'].includes(x.type));
   const planchersR=configs.filter(x=>x.type==='plancher');
   const containers=configs.filter(x=>x.type==='container');
+  const tagColors={'#d97706':'background:#fef3c7;color:#92400e','#2563eb':'background:#dbeafe;color:#1e40af','#059669':'background:#d1fae5;color:#065f46'};
 
   function cfgBlock(items,dotCol,catLbl,addOpts){
-    const rows=items.map(it=>`
-      <div onclick="chOpenConfig(${JSON.stringify(it).replace(/"/g,'&quot;').replace(/'/g,"\'")})"
-        style="display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s"
-        onmouseover="this.style.background='rgba(185,28,28,.09)'"
-        onmouseout="this.style.background='transparent'">
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(it.label)}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:1px">${esc(it.detail||'')}</div>
-        </div>
-        <span style="font-size:10.5px;font-weight:800;padding:2px 9px;border-radius:20px;background:${dotCol==='#d97706'?'#fef3c7':dotCol==='#2563eb'?'#dbeafe':'#d1fae5'};color:${dotCol==='#d97706'?'#92400e':dotCol==='#2563eb'?'#1e40af':'#065f46'}">${it.label.split('—')[0].trim()}</span>
-        <span style="font-size:13px;color:var(--text3)">↗</span>
-      </div>`).join('');
-    const addButtons=addOpts.map(opt=>`
-      <button onclick="chAjouterType('${opt.type}')"
-        style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1.5px dashed var(--border2);background:transparent;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);margin-right:5px;margin-top:6px">
-        + ${opt.label}
-      </button>`).join('');
     return `<div style="border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:7px;padding:5px 18px;background:var(--bg3);border-bottom:1px solid var(--border)">
         <div style="width:7px;height:7px;border-radius:50%;background:${dotCol}"></div>
         <span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text2)">${catLbl}</span>
         <span style="font-size:9.5px;color:var(--text3);margin-left:auto">${items.length} config${items.length!==1?'s':''}</span>
       </div>
-      ${rows}
-      <div style="padding:6px 18px 10px">${addButtons}</div>
+      ${items.map(it=>`
+        <div onclick="chOpenConfig(${JSON.stringify(it).replace(/"/g,'&quot;')})"
+          style="display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s"
+          onmouseover="this.style.background='rgba(185,28,28,.09)'"
+          onmouseout="this.style.background='transparent'">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(it.label)}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:1px">${esc(it.detail||'')}</div>
+          </div>
+          <span style="font-size:10.5px;font-weight:800;padding:2px 9px;border-radius:20px;${tagColors[dotCol]||''}">${it.label.split(' ')[0]}</span>
+          <span style="font-size:13px;color:var(--text3)">↗</span>
+        </div>`).join('')}
+      <div style="padding:6px 18px 8px;display:flex;gap:6px;flex-wrap:wrap">
+        ${addOpts.map(opt=>`<button onclick="chAjouterType('${opt.type}')" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1.5px dashed var(--border2);background:transparent;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">+ ${opt.label}</button>`).join('')}
+      </div>
     </div>`;
   }
 
-  return `
-    <div style="background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--rl);overflow:hidden">
-
-      <!-- Header fiche -->
-      <div style="padding:16px 18px 14px;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
-          <div>
-            <div style="font-size:10.5px;font-weight:700;color:var(--red);margin-bottom:3px">${esc(ch.ref)}</div>
-            <div style="font-size:20px;font-weight:900;color:var(--text);line-height:1.2">${esc(ch.nom)}</div>
-          </div>
-          <div style="display:flex;gap:5px;flex-shrink:0;align-items:flex-start">
-            <span onclick="chEditChantier()" style="font-size:10.5px;font-weight:600;padding:2px 10px;border-radius:20px;border:1.5px solid #7f1d1d;background:#7f1d1d;color:#fff;cursor:pointer">✏ Modifier</span>
-            <span onclick="chDupliquer()" style="font-size:10.5px;font-weight:600;padding:2px 10px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer">⧉ Dupliquer</span>
-            <span onclick="chSupprimer()" style="font-size:10.5px;font-weight:600;padding:2px 10px;border-radius:20px;border:1.5px solid rgba(185,28,28,.25);color:var(--red);background:var(--bg3);cursor:pointer">🗑</span>
-          </div>
+  return `<div style="background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--rl);overflow:hidden">
+    <div style="padding:16px 18px 14px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
+        <div>
+          <div style="font-size:10.5px;font-weight:700;color:var(--red);margin-bottom:3px">${esc(ch.ref||'')}</div>
+          <div style="font-size:20px;font-weight:900;color:var(--text);line-height:1.2">${esc(ch.nom||'(sans nom)')}</div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
-          <div style="font-size:13px;color:var(--text2)"><strong style="color:var(--text);font-weight:700;font-size:14px">${esc(ch.client||'')}</strong></div>
-          ${ch.tel?`<div style="font-size:13px;color:var(--text2)">📞 ${esc(ch.tel)}</div>`:''}
-          ${ch.addr?`<div style="font-size:13px"><a href="https://www.google.com/maps/search/${encodeURIComponent(ch.addr)}" target="_blank" style="color:var(--blue);text-decoration:none;font-size:12.5px">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:3px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(ch.addr)}</a></div>`:''}
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <span onclick="chEditChantier()" style="font-size:10.5px;font-weight:600;padding:2px 10px;border-radius:20px;border:1.5px solid #7f1d1d;background:#7f1d1d;color:#fff;cursor:pointer">✏ Modifier</span>
+          <span onclick="chDupliquer()" style="font-size:10.5px;font-weight:600;padding:2px 10px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer">⧉ Dupliquer</span>
+          <span onclick="chSupprimer()" style="font-size:10.5px;font-weight:600;padding:2px 10px;border-radius:20px;border:1.5px solid rgba(185,28,28,.25);color:var(--red);background:var(--bg3);cursor:pointer">🗑</span>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:2px 10px;text-align:center">
-            <div style="font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text3)">Sortie</div>
-            <div style="font-size:11.5px;font-weight:800;color:var(--text)">${od}</div>
-          </div>
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:2px 10px;text-align:center">
-            <div style="font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text3)">Retour</div>
-            <div style="font-size:11.5px;font-weight:800;color:var(--text)">${id2}</div>
-          </div>
-          ${days>0?`<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:20px;padding:2px 10px;text-align:center">
-            <div style="font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#92400e">Durée</div>
-            <div style="font-size:11.5px;font-weight:800;color:#92400e">${days} j</div>
-          </div>`:''}
-        </div>
-        ${ch.notes?`<div style="background:#fffbeb;border-top:1px solid #fcd34d;margin-top:12px;padding:9px 0 0;font-size:12px;color:#78350f;line-height:1.6">
-          <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#92400e;margin-bottom:2px">📝 Notes</div>${esc(ch.notes)}</div>`:''}
       </div>
-
-      <!-- Configurations -->
-      <div style="display:flex;align-items:center;gap:10px;padding:7px 18px;background:var(--bg3);border-bottom:1px solid var(--border)">
-        <span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--text3)">Configurations</span>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+        <div style="font-size:14px;font-weight:700;color:var(--text)">${esc(ch.client||'')}</div>
+        ${ch.tel?`<div style="font-size:13px;color:var(--text2)">📞 ${esc(ch.tel)}</div>`:''}
+        ${ch.addr?`<div style="font-size:13px"><a href="https://www.google.com/maps/search/${encodeURIComponent(ch.addr)}" target="_blank" style="color:#2563eb;text-decoration:none;font-size:12.5px">📍 ${esc(ch.addr)}</a></div>`:''}
       </div>
-
-      ${cfgBlock(tentes,'#d97706','Tentes',[
-        {type:'p93',label:'P93/50'},
-        {type:'p240',label:'P240'},
-        {type:'p334',label:'P334'},
-      ])}
-      ${cfgBlock(planchersR,'#2563eb','Plancher',[{type:'plancher',label:'Plancher'}])}
-      ${cfgBlock(containers,'#059669','Containers',[{type:'container',label:'Container'}])}
-
-    </div>`;
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:2px 10px;text-align:center">
+          <div style="font-size:8.5px;font-weight:700;text-transform:uppercase;color:var(--text3)">Sortie</div>
+          <div style="font-size:11.5px;font-weight:800;color:var(--text)">${od}</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:2px 10px;text-align:center">
+          <div style="font-size:8.5px;font-weight:700;text-transform:uppercase;color:var(--text3)">Retour</div>
+          <div style="font-size:11.5px;font-weight:800;color:var(--text)">${id2}</div>
+        </div>
+        ${days>0?`<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:20px;padding:2px 10px;text-align:center">
+          <div style="font-size:8.5px;font-weight:700;text-transform:uppercase;color:#92400e">Durée</div>
+          <div style="font-size:11.5px;font-weight:800;color:#92400e">${days} j</div>
+        </div>`:''}
+      </div>
+      ${ch.notes?`<div style="background:#fffbeb;border-top:1px solid #fcd34d;margin-top:12px;padding:9px 0 0">
+        <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:#92400e;margin-bottom:2px">📝 Notes</div>
+        <div style="font-size:12px;color:#78350f;line-height:1.6">${esc(ch.notes)}</div>
+      </div>`:''}
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 18px;background:var(--bg3);border-bottom:1px solid var(--border)">
+      <span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--text3)">Configurations</span>
+    </div>
+    ${cfgBlock(tentes,'#d97706','Tentes',[{type:'p93',label:'P93/50'},{type:'p240',label:'P240'},{type:'p334',label:'P334'}])}
+    ${cfgBlock(planchersR,'#2563eb','Plancher',[{type:'plancher',label:'Plancher'}])}
+    ${cfgBlock(containers,'#059669','Containers',[{type:'container',label:'Container'}])}
+  </div>`;
 }
+
 
 // ── ACTIONS ────────────────────────────────────────────────
 function chSel(id){ CH_AID=id; chSave(); }
@@ -5611,7 +5593,6 @@ function commandeRightContainers(){
                 <span style="font-size:11px;color:var(--text3);flex:1">${equip||''}${c.notes?' · '+c.notes:''}</span>
                 <span style="font-size:10px;padding:1px 6px;border-radius:6px;background:var(--bg3);color:var(--text3);flex-shrink:0">${c.etat_gen||'Bon'}</span>
               </div>`;
-            }).join('')}
             }).join('')}
           </div>
         </div>`;
@@ -7547,7 +7528,7 @@ function cmdFinalizeCommand(){
   const adEl=document.getElementById('cmd-adresse'); if(adEl) adEl.value='';
   const refEl=document.getElementById('cmd-ref'); if(refEl) refEl.value='';
   // Mettre la date de sortie à aujourd'hui par défaut
-  const dOut=document.getElementById('dateOut');
+  const dOut=document.getElementById('dateOut')||document.getElementById('ch-out');
   if(dOut) dOut.value=new Date().toISOString().split('T')[0];
   renderCommande();
 }
@@ -8699,14 +8680,14 @@ async function mobDeleteItem(ref,fromMobPanel){
 async function initSupabase(){
   await SB.ping();
   if(SB.online){
-    // Migrer configs locales si Supabase vide
+    // Migrer configs locales si Supabase vide (une seule fois)
     const sbCfg=await SB.get('tp_configs','?limit=1');
     if(Array.isArray(sbCfg)&&sbCfg.length===0){
       const ls=JSON.parse(localStorage.getItem('cdm_saves')||'[]');
       for(const s of ls) await SB.post('tp_configs',{name:s.name,profile:s.snap?.profile||'p93',snap:s.snap});
       if(ls.length) syncStatus('📤 Configs migrées vers Supabase','#2563eb',3000);
     }
-    // Migrer mobilier local si Supabase vide
+    // Migrer mobilier local si Supabase vide (une seule fois)
     const sbMob=await SB.get('tp_mobilier','?limit=1');
     if(Array.isArray(sbMob)&&sbMob.length===0){
       const lm=JSON.parse(localStorage.getItem('cdm_mob_stock')||'[]');
@@ -8714,7 +8695,8 @@ async function initSupabase(){
       if(lm.length) syncStatus('📤 Mobilier migré vers Supabase','#2563eb',3000);
     }
   }
-  initSupabase();
+  // Re-ping toutes les 5 minutes (pas de recursion)
+  setInterval(()=>SB.ping(), 5*60*1000);
 }
 
 restorePersisted();
