@@ -309,25 +309,8 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
 <!-- LEFT -->
 <div class="left np">
 
-  <!-- CHANTIER -->
-  <div class="sec">
-    <div class="sec-hdr" onclick="togSec(this)">📋 Chantier & client</div>
-    <div class="sec-body">
-      <div class="fr">
-        <div class="fg"><label>Chantier / Objet</label><input id="chantier" placeholder="Nom du chantier" oninput="cmdSaveDraft({chantier:this.value})"></div>
-        <div class="fg"><label>Client</label><input id="client" placeholder="Nom du client" oninput="cmdSaveDraft({client:this.value})"></div>
-      </div>
-      <div class="fr">
-        <div class="fg"><label>Date sortie</label><input id="dateOut" type="date" onchange="cmdSaveDraft({dateOut:this.value})"></div>
-        <div class="fg"><label>Date retour</label><input id="dateBack" type="date" onchange="cmdSaveDraft({dateBack:this.value})"></div>
-      </div>
-      <div class="f1"><div class="fg"><label>Adresse client (rue, CP ville)</label><textarea id="cmd-adresse" rows="2" placeholder="Sus la Chapelle 12&#10;1532 Fetigny" style="width:100%;resize:vertical;padding:4px 7px;border:1.5px solid var(--border2);border-radius:5px;font-family:var(--font);font-size:11px;background:var(--bg2);color:var(--text)" oninput="cmdSaveDraft({adresse:this.value})"></textarea></div></div>
-      <div class="fr">
-        <div class="fg"><label>Référence (ex: ap/aj)</label><input id="cmd-ref" placeholder="ap/aj" oninput="cmdSaveDraft({ref:this.value})"></div>
-        <div class="fg"><label>Désignation (optionnel)</label><input id="designation" placeholder="Auto-générée si vide" oninput="cmdSaveDraft({designation:this.value})"></div>
-      </div>
-    </div>
-  </div>
+  <!-- CHANTIER SÉLECTIONNÉ — topo fixo em todos os separadores -->
+  <div id="chantier-global-inner" style="border-bottom:1px solid var(--border);"></div>
 
   <!-- PARAMS (injecté selon profil) -->
   <div class="sec">
@@ -1957,7 +1940,7 @@ function paramsHTML(prof){
     </div>
     ${cheneauHTML()}
     ${plancherZonesHTML()}`;
-  if(prof==='commande') return `<div id="cmd-params-inner"></div>`;
+  if(prof==='commande') return `<div id="cmd-params-inner" style="display:none"></div>`;
   if(prof==='stock') return `<div id="stock-params-inner"></div>`;
   if(prof==='pagode') return `<div id="pagode-params-inner"></div>`;
   if(prof==='plancher') return `<div id="plancher-params-inner"></div>`;
@@ -2504,6 +2487,8 @@ function switchProfile(prof, tabEl){
   document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
   if(tabEl) tabEl.classList.add('active');
   $('params-body').innerHTML = paramsHTML(prof);
+  // Chantier sélectionné — toujours visible en haut
+  setTimeout(renderChantierGlobal, 10);
   const rHTML = rideauxHTML(prof);
   $('sec-rideaux').style.display = rHTML ? 'block' : 'none';
   $('rideaux-body').innerHTML = rHTML;
@@ -2860,38 +2845,33 @@ function renderB(rows){
 }
 
 function calcAddToCommande(){
-  if(!LAST){alert('Calculez d\'abord une tente.');return;}
-  const _validProfs=['p93','p240','p334','pontdanse','pagode','plancher'];
+  if(!LAST){alert('Calculez d\'abord une configuration.');return;}
+  const _validProfs=['p93','p240','p334','pontdanse','pagode','plancher','container'];
   if(!_validProfs.includes(S.profile)){alert('Activez un onglet de configurateur avant d\'ajouter au chantier.');return;}
+  const ch=chGetActive();
+  if(!ch){
+    // Pas de chantier actif — proposer d'en créer un ou d'aller dans Chantiers
+    if(confirm('Aucun chantier actif.\nVoulez-vous aller dans l\'onglet Chantiers pour en sélectionner ou créer un ?')){
+      switchProfile('commande',document.querySelector('.ptab[data-profile="commande"]'));
+    }
+    return;
+  }
+  // Construire le label
   const p=params();
-  const t={
-    profil:S.profile,
-    largeur: S.profile==='pagode'   ? String(S.pagodeSz)
-           : S.profile==='plancher' ? String(S.plancherW||10)
-           : S.profile==='p240'     ? String(p.width||p.largeur)
-           :                          String(p.largeur),
-    longueur: S.profile==='pagode'   ? String(S.pagodeSz)
-            : S.profile==='plancher' ? String(S.plancherL||20)
-            : S.profile==='p240'     ? String(p.length||p.longueur)
-            :                          String(p.longueur),
-    hauteur: S.profile==='p93'?(p.hauteur||'H2.3'):
-             S.profile==='p240'?(p.height||'H3'):
-             S.profile==='p334'?(p.hauteur334||'H4'):
-             S.profile==='pontdanse'?(p.hauteurPD||'H80'):'',
-    _pagodeNb: S.profile==='pagode'?S.pagodeNb:undefined,
-    note: p.designation||LAST.des||'',
-    _plancherZones:(S.plancherZones||[]).filter(z=>z.w>0&&z.l>0).length>0?JSON.parse(JSON.stringify(S.plancherZones.filter(z=>z.w>0&&z.l>0))):undefined,
-    _overrides:{...OV},
-    _extraA:(window.OV_EXTRA?.A||[]).filter(r=>r.name&&r.qty>0).map(r=>({name:r.name,qty:r.qty})),
-    _extraB:(window.OV_EXTRA?.B||[]).filter(r=>r.name&&r.qty>0).map(r=>({name:r.name,qty:r.qty}))
-  };
-  const d=cmdGetDraft();
-  const tentes=d.tentes||[];
-  tentes.push(t);
-  cmdSaveDraft({tentes});
-  // Feedback visuel rapide
+  const profLabels={p93:'P93/50',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode',plancher:'Plancher',container:'Container'};
+  const w=S.profile==='pagode'?S.pagodeSz:S.profile==='plancher'?S.plancherW:(p.width||p.largeur||'');
+  const l=S.profile==='pagode'?S.pagodeSz:S.profile==='plancher'?S.plancherL:(p.length||p.longueur||'');
+  const lbl=(profLabels[S.profile]||S.profile)+(w&&l?' — '+w+'×'+l+'m':'');
+  const detail=LAST.des||'';
+  const snap=JSON.stringify(typeof getSnap==='function'?getSnap():S);
+  const cfg={id:'cfg'+Date.now(),type:S.profile,label:lbl,detail,snap};
+  ch.configs=ch.configs||[]; ch.configs.push(cfg); chSave();
+  // Feedback visuel
   const btn=document.querySelector('[onclick="calcAddToCommande()"]');
-  if(btn){const orig=btn.textContent;btn.textContent='✅ Ajouté!';btn.style.background='#0f172a';setTimeout(()=>{btn.textContent=orig;btn.style.background='#16a34a';},1500);}
+  if(btn){const orig=btn.textContent;btn.textContent='✅ Ajouté à "'+ch.nom+'"!';btn.style.background='#0f172a';setTimeout(()=>{btn.textContent=orig;btn.style.background='#16a34a';},2000);}
+  // Aussi sauvegarder dans l'ancien système pour compatibilité
+  const t={profil:S.profile,largeur:String(w),longueur:String(l),note:detail,_overrides:{...OV}};
+  const d=cmdGetDraft(); const tentes=d.tentes||[]; tentes.push(t); cmdSaveDraft({tentes});
 }
 function renderLiv(A,B){
   const ETAT='<select style="font-size:9pt;width:80px;border:1px solid #d1d5db;border-radius:4px;padding:2px;"><option>Neuf</option><option>Bon</option><option>Usagé</option><option>Défaut</option></select>';
@@ -5129,86 +5109,344 @@ function cmdSaveDraft(patch){
 
 function renderCommande(){
   const inner=document.getElementById('cmd-params-inner');
-  if(inner){ inner.innerHTML=commandeLeft(); bindInputs(); }
+  if(inner){ inner.innerHTML=chantierLeft(); bindInputs(); }
   const panel=document.getElementById('cmd-right-panel');
-  if(panel){ panel.innerHTML=commandeRight(); }
+  if(panel){ panel.innerHTML=chantierRight(); }
+  renderChantierGlobal();
 }
 
-function commandeLeft(){
-  const d=cmdGetDraft();
-  const tentes=d.tentes||[];
-  const containers=d.containers||[];
-  const chauffage=d.chauffage||[];
+// ══════════════════════════════════════════════════════════════
+// CHANTIERS — Intégration chantiers_proto dans TentoPro
+// ══════════════════════════════════════════════════════════════
 
-  const sections=[
-    {key:'tentes',icon:'⛺',label:'Tentes / Podiums',count:tentes.length},
-    {key:'containers',icon:'📦',label:'Containers',count:containers.length},
-    {key:'chauffage',icon:'🔥',label:'Chauffage',count:chauffage.length},
+// Données chantiers (à terme: Supabase)
+let CH_DATA = JSON.parse(localStorage.getItem('tp_chantiers_data')||'[]');
+let CH_AID = localStorage.getItem('tp_chantiers_aid')||null; // chantier actif
 
-    {key:'notes',icon:'📝',label:'Notes',count:d.notes?1:0},
+function chSave(){localStorage.setItem('tp_chantiers_data',JSON.stringify(CH_DATA));localStorage.setItem('tp_chantiers_aid',CH_AID||'');}
+
+function chGetActive(){return CH_DATA.find(x=>x.id===CH_AID)||null;}
+
+// Créer chantier démo si vide
+function chInitDemo(){
+  if(CH_DATA.length) return;
+  CH_DATA=[
+    {id:'c1',ref:'AJ/25',nom:'Fête des Vignerons',client:'Commune de Vevey',tel:'+41 21 925 00 00',
+     addr:'Rue du Lac 12, 1800 Vevey',out:'2025-06-14',in:'2025-06-22',
+     notes:'Accès limité Rue du Lac. Sol en gravier.',
+     configs:[
+       {id:'cfg1',type:'p240',label:'P240 — 10×21m H3',detail:'Été · Piquets 50cm',snap:null},
+       {id:'cfg2',type:'p334',label:'P334 — 42×105m H6',detail:'Été · /10m · 6 cs',snap:null},
+       {id:'cfg3',type:'plancher',label:'Plancher 10×20m',detail:'Pan. 0,85m · 11 travées',snap:null},
+       {id:'cfg4',type:'container',label:'123 — PMR',detail:'Sanitaire PMR',snap:null},
+     ]},
+    {id:'c2',ref:'LS/25',nom:'Mariage Château Morges',client:'Famille Rochat',tel:'+41 79 456 78 90',
+     addr:'Route du Château 5, 1110 Morges',out:'2025-07-05',in:'2025-07-08',notes:'Pelouse fine.',configs:[]},
+    {id:'c3',ref:'AP/25',nom:'Festival Paléo',client:'Paléo Festival SA',tel:'+41 22 363 40 00',
+     addr:"Plaine de l\'Asse, 1260 Nyon",out:'2025-07-18',in:'2025-07-28',notes:'Grande superficie.',configs:[]},
   ];
-  return `
-    <div style="margin-bottom:10px">
-      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">Navigation</div>
-      ${sections.map(s=>`
-        <button onclick="S.cmdSection='${s.key}';renderCommande()" style="width:100%;display:flex;align-items:center;gap:8px;padding:7px 10px;margin-bottom:4px;border-radius:7px;border:1.5px solid ${S.cmdSection===s.key?'var(--red)':'var(--border)'};background:${S.cmdSection===s.key?'var(--red-dim)':'var(--bg3)'};cursor:pointer;font-family:var(--font);text-align:left">
-          <span style="font-size:14px">${s.icon}</span>
-          <span style="font-size:12px;font-weight:700;color:${S.cmdSection===s.key?'var(--red)':'var(--text)'};">${s.label}</span>
-          ${s.count>0?`<span style="margin-left:auto;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;background:${S.cmdSection===s.key?'var(--red)':'var(--bg4)'};color:${S.cmdSection===s.key?'#fff':'var(--text2)'}">${s.count}</span>`:''}
-        </button>`).join('')}
-    </div>
-    <div style="border-top:1px solid var(--border);padding-top:10px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">Résumé chantier</div>
-      <div style="font-size:11px;color:var(--text2);line-height:2">
-        ${tentes.length?`⛺ ${tentes.length} tente(s)<br>`:'<span style="color:var(--text3)">⛺ Aucune tente</span><br>'}
-        ${containers.length?`📦 ${containers.length} container(s)<br>`:'<span style="color:var(--text3)">📦 Aucun container</span><br>'}
-        ${chauffage.length?`🔥 ${chauffage.length} unité(s) chauffage<br>`:'<span style="color:var(--text3)">🔥 Aucun chauffage</span><br>'}
-      </div>
-    </div>
-    <button onclick="bonPreparationChantier()" style="width:100%;padding:9px;border-radius:7px;border:none;background:var(--red);color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:var(--font);margin-bottom:5px">🖨 Bon de préparation chantier</button>
-    <button onclick="cmdCheckAvailability()" style="width:100%;padding:7px;border-radius:7px;border:1.5px solid var(--green);background:#f0fdf4;color:var(--green);font-size:11px;font-weight:800;cursor:pointer;font-family:var(--font);margin-bottom:4px">🔍 Vérifier disponibilité</button>
-    <button onclick="cmdFinalizeCommand()" style="width:100%;padding:7px;border-radius:7px;border:1.5px solid var(--blue);background:#eff6ff;color:var(--blue);font-size:11px;font-weight:800;cursor:pointer;font-family:var(--font);margin-bottom:8px">✅ Confirmer le chantier</button>
-    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:5px">Bons de préparation (internes)</div>
-    <button onclick="prepPrintTentes()" style="width:100%;padding:7px;border-radius:7px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);margin-bottom:4px;text-align:left">📋 ⛺ Prépa tentes${tentes.length?' ('+tentes.length+')':''}</button>
-    <button onclick="prepPrintContainers()" style="width:100%;padding:7px;border-radius:7px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);margin-bottom:4px;text-align:left">📋 📦 Prépa containers${containers.length?' ('+containers.length+')':''}</button>
-    <button onclick="prepPrintChauffage()" style="width:100%;padding:7px;border-radius:7px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);margin-bottom:8px;text-align:left">📋 🔥 Prépa chauffage${chauffage.length?' ('+chauffage.length+')':''}</button>
-    <button onclick="cmdClearDraft()" style="width:100%;padding:6px;border-radius:7px;border:1px solid var(--border);background:var(--bg3);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">🗑 Vider le chantier</button>
-    ${(()=>{
-      const cmds=cmdGetCommands();
-      if(!cmds.length) return '';
-      return `<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px">
-        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">Commandes confirmées (${cmds.length})</div>
-        ${cmds.slice(0,5).map(cmd=>{
-          const isActive=!cmd.dateBack||(cmd.dateBack>=new Date().toISOString().slice(0,10));
-          return `<div style="padding:6px 8px;background:${isActive?'#f0fdf4':'var(--bg3)'};border:1px solid ${isActive?'#86efac':'var(--border)'};border-radius:6px;margin-bottom:4px;font-size:10px">
-            <div style="font-weight:800;color:var(--text)">${esc(cmd.chantier||'Sans nom')}</div>
-            <div style="color:var(--text3)">${cmd.dateOut||'?'} → ${cmd.dateBack||'?'}</div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">
-              <span style="color:var(--text3)">${cmd.tentes?.length||0} tente(s)</span>
-              <div style="display:flex;gap:4px">
-                <button onclick="cmdEditCommand('${cmd.id}')" style="padding:1px 7px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--blue);font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font)">✏</button>
-                <button onclick="cmdDeleteCommand('${cmd.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0 3px">🗑</button>
-              </div>
-            </div>
-          </div>`;
-        }).join('')}
-        ${cmds.length>5?`<div style="font-size:10px;color:var(--text3);text-align:center">${cmds.length-5} de plus…</div>`:''}
-      </div>
-      ${commandeGantt()}
-      `;
-    })()}`;
+  CH_AID='c1'; chSave();
+}
+chInitDemo();
+
+// Ouvrir config dans le calculateur
+function chOpenConfig(cfg){
+  if(!cfg) return;
+  const profMap={p93:'p93',p240:'p240',p334:'p334',pontdanse:'pontdanse',pagode:'pagode',plancher:'plancher',container:'container'};
+  const prof=profMap[cfg.type]||cfg.type;
+  // Charger snap si disponible
+  if(cfg.snap){ try{ const sn=JSON.parse(cfg.snap); if(sn) Object.assign(S,sn); }catch(e){} }
+  switchProfile(prof, document.querySelector('.ptab[data-profile="'+prof+'"]'));
 }
 
-function commandeRight(){
-  switch(S.cmdSection){
-    case 'tentes':     return commandeRightTentes();
-    case 'containers': return commandeRightContainers();
-    case 'chauffage':  return commandeRightChauffage();
-    case 'mobilier':   return commandeRightMobilier();
-    case 'notes':      return commandeRightNotes();
-    default:           return commandeRightTentes();
-  }
+// Ajouter config au chantier actif depuis un calculateur
+function chAddCurrentToChantier(type){
+  const ch=chGetActive();
+  if(!ch){ alert('Sélectionnez d\'abord un chantier dans l\'onglet Chantiers.'); return; }
+  const snap=JSON.stringify(getSnap?getSnap():S);
+  const profLabels={p93:'P93/50',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode',plancher:'Plancher',container:'Container'};
+  const lbl=(profLabels[type]||type)+' — '+new Date().toLocaleDateString('fr-CH');
+  const cfg={id:'cfg'+Date.now(),type,label:lbl,detail:'',snap};
+  ch.configs=ch.configs||[];
+  ch.configs.push(cfg);
+  chSave();
+  alert('Ajouté au chantier "'+ch.nom+'" ✓');
 }
+
+// ── LEFT PANEL ──────────────────────────────────────────────
+function chantierLeft(){
+  const ch=chGetActive();
+  const rec=CH_DATA.slice(0,5);
+  return `
+    <div style="margin-bottom:0">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:7px">Chantier &amp; Client</div>
+      <div style="display:flex;gap:5px;margin-bottom:8px">
+        <button onclick="chNewChantier()" style="flex:1;padding:4px;border-radius:var(--r);border:1.5px solid #7f1d1d;background:#7f1d1d;color:#fff;cursor:pointer;font-size:10.5px;font-weight:700;font-family:var(--font);text-align:center">✚ Nouveau</button>
+        <button onclick="chShowSearch()" style="flex:1;padding:4px;border-radius:var(--r);border:1.5px solid var(--border2);background:var(--bg);cursor:pointer;font-size:10.5px;font-weight:700;font-family:var(--font);color:var(--text2)">🔍 Rechercher</button>
+        <button onclick="chAddCurrentToChantier(S.profile)" style="flex:1;padding:4px;border-radius:var(--r);border:1.5px solid var(--border2);background:var(--bg);cursor:pointer;font-size:10.5px;font-weight:700;font-family:var(--font);color:var(--text2)">⊕ Ajouter</button>
+      </div>
+
+      <div style="padding:7px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px">
+        <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:4px">5 derniers chantiers</div>
+        ${rec.map(d=>`
+          <div onclick="chSel('${d.id}');renderCommande()" style="display:flex;align-items:center;gap:6px;padding:3px 5px;border-radius:5px;cursor:pointer;transition:.15s;" onmouseover="this.style.background='rgba(185,28,28,.09)'" onmouseout="this.style.background='transparent'">
+            <div style="width:5px;height:5px;border-radius:50%;background:${d.id===CH_AID?'var(--red)':'var(--border2)'};flex-shrink:0;"></div>
+            <span style="font-size:11.5px;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.nom}</span>
+            <span style="font-size:10px;color:var(--text3)">${d.ref}</span>
+          </div>`).join('')}
+      </div>
+
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:9px;display:flex;align-items:center;gap:5px">
+        <div style="background:rgba(185,28,28,.09);color:var(--red);border:1px solid rgba(185,28,28,.2);border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">1</div>
+        Chantier sélectionné
+      </div>
+
+      <div style="margin-bottom:7px">
+        <div style="display:flex;gap:7px">
+          <div style="flex:2">
+            <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Chantier / Objet</label>
+            <input id="ch-nom" value="${esc(ch?.nom||'')}" placeholder="Nom du chantier" oninput="chUpdateField('nom',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;color:var(--text);font-size:12.5px;font-family:var(--font);width:100%;outline:none">
+          </div>
+          <div style="flex:1">
+            <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Réf.</label>
+            <input id="ch-ref" value="${esc(ch?.ref||'')}" placeholder="AJ/25" oninput="chUpdateField('ref',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;color:var(--text);font-size:12.5px;font-family:var(--font);width:100%;outline:none">
+          </div>
+        </div>
+      </div>
+      <div style="margin-bottom:7px">
+        <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Client</label>
+        <input id="ch-client" value="${esc(ch?.client||'')}" placeholder="Nom du client" oninput="chUpdateField('client',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;color:var(--text);font-size:12.5px;font-family:var(--font);width:100%;outline:none">
+      </div>
+      <div style="margin-bottom:7px">
+        <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Téléphone</label>
+        <div style="position:relative">
+          <span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3)">📞</span>
+          <input id="ch-tel" type="tel" value="${esc(ch?.tel||'')}" placeholder="+41 79 000 00 00" oninput="chUpdateField('tel',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px 6px 28px;color:var(--text);font-size:12.5px;font-family:var(--font);width:100%;outline:none">
+        </div>
+      </div>
+      <div style="margin-bottom:7px">
+        <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Adresse</label>
+        <input id="ch-addr" value="${esc(ch?.addr||'')}" placeholder="Rue, CP Ville" oninput="chUpdateField('addr',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;color:var(--text);font-size:12.5px;font-family:var(--font);width:100%;outline:none">
+        ${ch?.addr?`<a href="https://www.google.com/maps/search/${encodeURIComponent(ch.addr)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--blue);text-decoration:none;margin-top:3px;font-weight:600"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Google Maps</a>`:''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Sortie</label>
+          <input type="date" id="ch-out" value="${ch?.out||''}" oninput="chUpdateField('out',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;color:var(--text);font-size:12.5px;font-family:var(--font);width:100%;outline:none">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Retour</label>
+          <input type="date" id="ch-in" value="${ch?.in||''}" oninput="chUpdateField('in',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;color:var(--text);font-size:12.5px;font-family:var(--font);width:100%;outline:none">
+        </div>
+      </div>
+      <div style="margin-bottom:7px">
+        <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Notes</label>
+        <textarea id="ch-notes" oninput="chUpdateField('notes',this.value)" placeholder="Accès, conditions sol, spécificités…" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px;color:var(--text);font-size:12px;font-family:var(--font);width:100%;outline:none;resize:vertical;min-height:56px;line-height:1.5">${esc(ch?.notes||'')}</textarea>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;padding-top:9px;border-top:1px solid var(--border)">
+        <button onclick="chSaveChantier()" style="flex:2;padding:7px;border-radius:var(--r);border:1.5px solid #7f1d1d;background:#7f1d1d;color:#fff;cursor:pointer;font-size:11.5px;font-weight:700;font-family:var(--font)">💾 Enregistrer</button>
+        <button onclick="chCancelEdit()" style="flex:1;padding:7px;border-radius:var(--r);border:1.5px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;font-size:11.5px;font-weight:700;font-family:var(--font)">✕</button>
+      </div>
+
+      ${chMiniResumo(ch)}
+    </div>`;
+}
+
+function chMiniResumo(ch){
+  if(!ch||!ch.configs||!ch.configs.length) return '';
+  const cats=[
+    {lbl:'Tentes',col:'#d97706',items:ch.configs.filter(x=>['p93','p240','p334','pontdanse','pagode'].includes(x.type)),cls:'t',tagFn:x=>x.label.split('—')[0].trim()},
+    {lbl:'Plancher',col:'#2563eb',items:ch.configs.filter(x=>x.type==='plancher'),cls:'p',tagFn:x=>'Plan.'},
+    {lbl:'Containers',col:'#059669',items:ch.configs.filter(x=>x.type==='container'),cls:'c',tagFn:x=>'Cont.'},
+  ].filter(cat=>cat.items.length);
+  if(!cats.length) return '';
+  return `<div style="margin-top:10px">
+    <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:6px">Contenu<span style="flex:1;height:1px;background:var(--border);display:block"></span></div>
+    ${cats.map(cat=>`
+      <div style="margin-bottom:7px">
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:3px;display:flex;align-items:center;gap:4px">
+          <div style="width:5px;height:5px;border-radius:50%;background:${cat.col}"></div>${cat.lbl}
+          <span style="font-size:9px;background:var(--bg4);padding:0 5px;border-radius:8px;color:var(--text2)">${cat.items.length}</span>
+        </div>
+        ${cat.items.map(it=>`
+          <div onclick="chOpenConfig(${JSON.stringify(it).replace(/"/g,'&quot;').replace(/'/g,"\'")})" style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;margin-bottom:2px;transition:.12s" onmouseover="this.style.borderColor='var(--red)';this.style.background='rgba(185,28,28,.09)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg3)'">
+            <span style="font-size:11.5px;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.label)}</span>
+            <span style="font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:9px;background:${cat.cls==='t'?'#fef3c7':cat.cls==='p'?'#dbeafe':'#d1fae5'};color:${cat.cls==='t'?'#92400e':cat.cls==='p'?'#1e40af':'#065f46'}">${cat.tagFn(it)}</span>
+            <span style="font-size:10px;color:var(--text3)">↗</span>
+          </div>`).join('')}
+        <button onclick="chAjouter('${cat.lbl}')" style="display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:6px;border:1.5px dashed var(--border2);background:transparent;color:var(--text3);font-size:10.5px;font-weight:700;cursor:pointer;font-family:var(--font);width:100%;margin-top:2px">+ Ajouter</button>
+      </div>`).join('')}
+  </div>`;
+}
+
+// ── RIGHT PANEL ────────────────────────────────────────────
+function chantierRight(){
+  const ch=chGetActive();
+  if(!ch) return `<div style="padding:32px 20px;text-align:center;color:var(--text3)">
+    <div style="font-size:32px;margin-bottom:12px">🗂</div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:6px">Aucun chantier sélectionné</div>
+    <div style="font-size:12px">Créez un nouveau chantier ou sélectionnez-en un dans la liste</div>
+  </div>`;
+
+  const od=ch.out?ch.out.split('-').reverse().join('.'):'—';
+  const id2=ch.in?ch.in.split('-').reverse().join('.'):'—';
+  const days=ch.out&&ch.in?Math.round((new Date(ch.in)-new Date(ch.out))/86400000):0;
+  const configs=ch.configs||[];
+  const tentes=configs.filter(x=>['p93','p240','p334','pontdanse','pagode'].includes(x.type));
+  const planchersR=configs.filter(x=>x.type==='plancher');
+  const containers=configs.filter(x=>x.type==='container');
+
+  function cfgBlock(items,dotCol,catLbl,addOpts){
+    const rows=items.map(it=>`
+      <div onclick="chOpenConfig(${JSON.stringify(it).replace(/"/g,'&quot;').replace(/'/g,"\'")})"
+        style="display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s"
+        onmouseover="this.style.background='rgba(185,28,28,.09)'"
+        onmouseout="this.style.background='transparent'">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(it.label)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px">${esc(it.detail||'')}</div>
+        </div>
+        <span style="font-size:10.5px;font-weight:800;padding:2px 9px;border-radius:20px;background:${dotCol==='#d97706'?'#fef3c7':dotCol==='#2563eb'?'#dbeafe':'#d1fae5'};color:${dotCol==='#d97706'?'#92400e':dotCol==='#2563eb'?'#1e40af':'#065f46'}">${it.label.split('—')[0].trim()}</span>
+        <span style="font-size:13px;color:var(--text3)">↗</span>
+      </div>`).join('');
+    const addButtons=addOpts.map(opt=>`
+      <button onclick="chAjouterType('${opt.type}')"
+        style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1.5px dashed var(--border2);background:transparent;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);margin-right:5px;margin-top:6px">
+        + ${opt.label}
+      </button>`).join('');
+    return `<div style="border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:7px;padding:5px 18px;background:var(--bg3);border-bottom:1px solid var(--border)">
+        <div style="width:7px;height:7px;border-radius:50%;background:${dotCol}"></div>
+        <span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text2)">${catLbl}</span>
+        <span style="font-size:9.5px;color:var(--text3);margin-left:auto">${items.length} config${items.length!==1?'s':''}</span>
+      </div>
+      ${rows}
+      <div style="padding:6px 18px 10px">${addButtons}</div>
+    </div>`;
+  }
+
+  return `
+    <div style="background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--rl);overflow:hidden">
+
+      <!-- Header fiche -->
+      <div style="padding:16px 18px 14px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
+          <div>
+            <div style="font-size:10.5px;font-weight:700;color:var(--red);margin-bottom:3px">${esc(ch.ref)}</div>
+            <div style="font-size:20px;font-weight:900;color:var(--text);line-height:1.2">${esc(ch.nom)}</div>
+          </div>
+          <div style="display:flex;gap:5px;flex-shrink:0;align-items:flex-start">
+            <span onclick="chEditChantier()" style="font-size:10.5px;font-weight:600;padding:2px 10px;border-radius:20px;border:1.5px solid #7f1d1d;background:#7f1d1d;color:#fff;cursor:pointer">✏ Modifier</span>
+            <span onclick="chDupliquer()" style="font-size:10.5px;font-weight:600;padding:2px 10px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer">⧉ Dupliquer</span>
+            <span onclick="chSupprimer()" style="font-size:10.5px;font-weight:600;padding:2px 10px;border-radius:20px;border:1.5px solid rgba(185,28,28,.25);color:var(--red);background:var(--bg3);cursor:pointer">🗑</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+          <div style="font-size:13px;color:var(--text2)"><strong style="color:var(--text);font-weight:700;font-size:14px">${esc(ch.client||'')}</strong></div>
+          ${ch.tel?`<div style="font-size:13px;color:var(--text2)">📞 ${esc(ch.tel)}</div>`:''}
+          ${ch.addr?`<div style="font-size:13px"><a href="https://www.google.com/maps/search/${encodeURIComponent(ch.addr)}" target="_blank" style="color:var(--blue);text-decoration:none;font-size:12.5px">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:3px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(ch.addr)}</a></div>`:''}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:2px 10px;text-align:center">
+            <div style="font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text3)">Sortie</div>
+            <div style="font-size:11.5px;font-weight:800;color:var(--text)">${od}</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:2px 10px;text-align:center">
+            <div style="font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text3)">Retour</div>
+            <div style="font-size:11.5px;font-weight:800;color:var(--text)">${id2}</div>
+          </div>
+          ${days>0?`<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:20px;padding:2px 10px;text-align:center">
+            <div style="font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#92400e">Durée</div>
+            <div style="font-size:11.5px;font-weight:800;color:#92400e">${days} j</div>
+          </div>`:''}
+        </div>
+        ${ch.notes?`<div style="background:#fffbeb;border-top:1px solid #fcd34d;margin-top:12px;padding:9px 0 0;font-size:12px;color:#78350f;line-height:1.6">
+          <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#92400e;margin-bottom:2px">📝 Notes</div>${esc(ch.notes)}</div>`:''}
+      </div>
+
+      <!-- Configurations -->
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 18px;background:var(--bg3);border-bottom:1px solid var(--border)">
+        <span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--text3)">Configurations</span>
+      </div>
+
+      ${cfgBlock(tentes,'#d97706','Tentes',[
+        {type:'p93',label:'P93/50'},
+        {type:'p240',label:'P240'},
+        {type:'p334',label:'P334'},
+      ])}
+      ${cfgBlock(planchersR,'#2563eb','Plancher',[{type:'plancher',label:'Plancher'}])}
+      ${cfgBlock(containers,'#059669','Containers',[{type:'container',label:'Container'}])}
+
+    </div>`;
+}
+
+// ── ACTIONS ────────────────────────────────────────────────
+function chSel(id){ CH_AID=id; chSave(); }
+function chNewChantier(){
+  const id='ch'+Date.now();
+  CH_DATA.unshift({id,ref:'',nom:'',client:'',tel:'',addr:'',out:'',in:'',notes:'',configs:[]});
+  CH_AID=id; chSave(); renderCommande();
+}
+function chUpdateField(k,v){
+  const ch=chGetActive(); if(!ch) return;
+  ch[k]=v; chSave();
+  // Update maps link si adresse change
+  if(k==='addr') renderCommande();
+}
+function chSaveChantier(){ chSave(); renderCommande(); }
+function chCancelEdit(){ renderCommande(); }
+function chEditChantier(){ setTimeout(()=>document.getElementById('ch-nom')?.focus(),50); }
+function chDupliquer(){
+  const ch=chGetActive(); if(!ch) return;
+  const nc=JSON.parse(JSON.stringify(ch));
+  nc.id='ch'+Date.now(); nc.nom+=' (copie)'; nc.ref+='b';
+  CH_DATA.unshift(nc); CH_AID=nc.id; chSave(); renderCommande();
+}
+function chSupprimer(){
+  if(!confirm('Supprimer ce chantier ?')) return;
+  CH_DATA=CH_DATA.filter(x=>x.id!==CH_AID);
+  CH_AID=CH_DATA[0]?.id||null; chSave(); renderCommande();
+}
+function chShowSearch(){
+  const q=prompt('Rechercher un chantier:'); if(!q) return;
+  const found=CH_DATA.filter(d=>d.nom.toLowerCase().includes(q.toLowerCase())||d.client?.toLowerCase().includes(q.toLowerCase())||d.ref?.toLowerCase().includes(q.toLowerCase()));
+  if(!found.length){alert('Aucun résultat');return;}
+  if(found.length===1){chSel(found[0].id);renderCommande();return;}
+  const idx=prompt(found.map((d,i)=>`${i+1}. ${d.nom} (${d.ref})`).join('\n')+'\n\nNuméro:');
+  const n=+(idx)-1;
+  if(n>=0&&n<found.length){chSel(found[n].id);renderCommande();}
+}
+function chAjouter(catLbl){
+  if(catLbl==='Tentes'){chAjouterType('p240');}
+  else if(catLbl==='Plancher'){chAjouterType('plancher');}
+  else{chAjouterType('container');}
+}
+function chAjouterType(type){
+  const ch=chGetActive(); if(!ch){alert('Sélectionnez un chantier.');return;}
+  // Réinitialiser S et ouvrir le bon profil
+  const defaults={p93:{profile:'p93'},p240:{profile:'p240'},p334:{profile:'p334'},pontdanse:{profile:'pontdanse'},pagode:{profile:'pagode'},plancher:{profile:'plancher'},container:{profile:'container'}};
+  Object.assign(S,defaults[type]||{profile:type});
+  // Pré-remplir les infos chantier dans S pour affichage
+  S._chantierActif=ch.id;
+  switchProfile(type,document.querySelector('.ptab[data-profile="'+type+'"]'));
+}
+
+// Depuis un calculateur: ajouter la config courante au chantier actif
+function chSaveConfigToChantier(){
+  const ch=chGetActive();
+  if(!ch){alert('Sélectionnez d\'abord un chantier dans l\'onglet Chantiers.');return;}
+  const type=S.profile;
+  const snap=JSON.stringify(typeof getSnap==='function'?getSnap():S);
+  const profLabels={p93:'P93/50',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode',plancher:'Plancher',container:'Container'};
+  const w=document.getElementById('largeur')?.value||document.getElementById('width')?.value||'';
+  const l=document.getElementById('longueur')?.value||document.getElementById('length')?.value||'';
+  const lbl=(profLabels[type]||type)+(w&&l?' — '+w+'×'+l+'m':'');
+  const cfg={id:'cfg'+Date.now(),type,label:lbl,detail:'',snap};
+  ch.configs=ch.configs||[]; ch.configs.push(cfg); chSave();
+  alert('Config ajoutée au chantier "'+ch.nom+'" ✓');
+}
+
 
 /* ── Tentes ── */
 const CMD_LARGEURS = {
@@ -8483,6 +8721,7 @@ restorePersisted();
 initSupabase();
 document.getElementById('dateOut').value = new Date().toISOString().split('T')[0];
 switchProfile('commande', document.querySelector('.ptab[data-profile="commande"]'));
+renderChantierGlobal();
 
 
 </script>
