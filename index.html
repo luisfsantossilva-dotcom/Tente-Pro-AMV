@@ -367,6 +367,9 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
     </div>
   </div>
 
+  <!-- CHANTIER VIEW — visível só no separador Chantiers -->
+  <div id="chantier-view" style="display:none;overflow-y:auto;height:100%;padding:14px;"></div>
+
   <!-- VISUEL TENTE -->
   <div id="viz-wrap" style="margin-bottom:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--text2);margin-bottom:8px;">📐 Aperçu configurateur</div>
@@ -2549,12 +2552,16 @@ function switchProfile(prof, tabEl){
       const el=document.getElementById(id); if(el){el.style.display='none';el.innerHTML='';}
     });
     document.querySelectorAll('.rc').forEach(e=>e.style.display='none');
-    // Show mob panel
-    const mp=document.getElementById('mob-right-panel');
-    if(mp) mp.style.display='block';
-    // Hide hdr-right buttons that don't apply
-    const hdr2=document.querySelector('.hdr-right'); if(hdr2)hdr2.style.display='none';
-    // Hide sec-rideaux in left panel
+    const _cv_mob=document.getElementById('chantier-view'); if(_cv_mob)_cv_mob.style.display='none';
+    const _ab_mob=document.getElementById('cfg-actions-bar'); if(_ab_mob)_ab_mob.style.display='none';
+    const _tb_mob=document.querySelector('.topbar'); if(_tb_mob)_tb_mob.style.display='none';
+    const _vw_mob=document.getElementById('viz-wrap'); if(_vw_mob)_vw_mob.style.display='none';
+    // Show mob panel — créer si inexistant
+    let mp=document.getElementById('mob-right-panel');
+    if(!mp){
+      const right=document.querySelector('.right');
+      if(right){mp=document.createElement('div');mp.id='mob-right-panel';mp.style.cssText='display:block;height:100%;overflow-y:auto;';right.appendChild(mp);}
+    } else { mp.style.display='block'; }
     const sr=$('sec-rideaux'); if(sr)sr.style.display='none';
     setTimeout(renderMobilierStock, 50);
     return;
@@ -2588,17 +2595,35 @@ function switchProfile(prof, tabEl){
     return;
   }
   if(prof==='commande'){
+    // Esconder elementos do calculador
     const rg=document.querySelector('.rg'); if(rg)rg.style.display='none';
     const vw=document.getElementById('viz-wrap'); if(vw)vw.style.display='none';
     const tb=document.querySelector('.topbar'); if(tb)tb.style.display='none';
+    const ab=document.getElementById('cfg-actions-bar'); if(ab)ab.style.display='none';
     const eb=$('err'); if(eb){eb.textContent='';eb.className='err';}
     const cp=document.getElementById('cont-right-panel'); if(cp){cp.style.display='none';cp.innerHTML='';}
-    document.querySelectorAll('.rc.B').forEach(e=>e.style.display='none');
-    const cmdPanel=document.getElementById('cmd-right-panel'); if(cmdPanel)cmdPanel.style.display='block';
-    const hdrBtns=document.querySelector('.hdr-right'); if(hdrBtns)hdrBtns.style.display='none';
-    setTimeout(renderCommande,50);
+    document.querySelectorAll('.rc').forEach(e=>e.style.display='none');
+    ['cmd-right-panel','stock-right-panel','pagode-right-panel','plancher-right-panel','chauf-right-panel','mob-right-panel'].forEach(id=>{
+      const el=document.getElementById(id); if(el){el.style.display='none';el.innerHTML='';}
+    });
+    // Mostrar a view de chantiers e preencher imediatamente
+    const cv=document.getElementById('chantier-view');
+    if(cv){
+      cv.style.display='block';
+      // Esconder cfg-actions-bar (não relevante no separador Chantiers)
+      const ab=document.getElementById('cfg-actions-bar'); if(ab)ab.style.display='none';
+      setTimeout(()=>{ cv.innerHTML=chantierRight(); },50);
+    }
     return;
   }
+  // Ao sair do separador Chantiers — esconder chantier-view, restaurar tudo
+  const _cv=document.getElementById('chantier-view'); if(_cv)_cv.style.display='none';
+  const _ab=document.getElementById('cfg-actions-bar'); if(_ab)_ab.style.display='flex';
+  // Garantir que .rg, topbar, viz-wrap estão visíveis (podem ter sido escondidos)
+  const _rg2=document.querySelector('.rg'); if(_rg2)_rg2.style.display='';
+  const _tb2=document.querySelector('.topbar'); if(_tb2)_tb2.style.display='';
+  const _vw2=document.getElementById('viz-wrap'); if(_vw2)_vw2.style.display='';
+  const _mp2=document.getElementById('mob-right-panel'); if(_mp2)_mp2.style.display='none';
   // Restore cmd panel when leaving
   const cmdPanel2=document.getElementById('cmd-right-panel'); if(cmdPanel2){cmdPanel2.style.display='none';cmdPanel2.innerHTML='';}
   const hdrBtns2=document.querySelector('.hdr-right'); if(hdrBtns2)hdrBtns2.style.display='';
@@ -5165,8 +5190,9 @@ function renderChantierGlobal(){
 function renderCommande(){
   const inner=document.getElementById('cmd-params-inner');
   if(inner){ inner.innerHTML=chantierLeft(); bindInputs(); }
-  const panel=document.getElementById('cmd-right-panel');
-  if(panel){ panel.innerHTML=chantierRight(); }
+  // Actualizar a view central de chantiers
+  const cv=document.getElementById('chantier-view');
+  if(cv&&cv.style.display!=='none') cv.innerHTML=chantierRight();
   renderChantierGlobal();
 }
 
@@ -5344,9 +5370,10 @@ function chMiniResumo(ch){
     {lbl:'Tentes',col:'#d97706',cls:'t',items:configs.filter(x=>['p93','p240','p334','pontdanse','pagode'].includes(x.type))},
     {lbl:'Plancher',col:'#2563eb',cls:'p',items:configs.filter(x=>x.type==='plancher')},
     {lbl:'Containers',col:'#059669',cls:'c',items:configs.filter(x=>x.type==='container')},
+    {lbl:'Mobilier',col:'#7c3aed',cls:'m',items:configs.filter(x=>x.type==='mobilier')},
   ].filter(cat=>cat.items.length);
   if(!cats.length) return '';
-  const tagColors={t:'background:#fef3c7;color:#92400e',p:'background:#dbeafe;color:#1e40af',c:'background:#d1fae5;color:#065f46'};
+  const tagColors={t:'background:#fef3c7;color:#92400e',p:'background:#dbeafe;color:#1e40af',c:'background:#d1fae5;color:#065f46',m:'background:#ede9fe;color:#5b21b6'};
   return `<div style="margin-top:10px">
     <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:6px">Contenu<span style="flex:1;height:1px;background:var(--border);display:block"></span></div>
     ${cats.map(cat=>`
@@ -5489,8 +5516,21 @@ function chNewChantier(){
 function chUpdateField(k,v){
   const ch=chGetActive(); if(!ch) return;
   ch[k]=v; chSave();
-  // Update maps link si adresse change
-  if(k==='addr') renderCommande();
+  // Para addr: só actualizar o link Maps sem re-renderizar (evita perda de foco)
+  if(k==='addr'){
+    // Actualizar link Maps no painel global sem re-render completo
+    const mapsLinks=document.querySelectorAll('a[data-ch-maps]');
+    const url=v?'https://www.google.com/maps/search/'+encodeURIComponent(v):'#';
+    mapsLinks.forEach(a=>{a.href=url;a.style.display=v?'inline-flex':'none';});
+    // Actualizar também no chantierRight se visível
+    const rMap=document.getElementById('r-maps-ch');
+    if(rMap&&v) rMap.innerHTML='<a href="'+url+'" target="_blank" style="color:#2563eb;text-decoration:none;font-size:12.5px">📍 '+esc(v)+'</a>';
+    // Re-render só o right panel do chantier (não o formulário)
+    if(S.profile==='commande'){
+      const panel=document.getElementById('cmd-right-panel');
+      if(panel) panel.innerHTML=chantierRight();
+    }
+  }
 }
 function chSaveChantier(){ chSave(); renderCommande(); }
 function chCancelEdit(){ renderCommande(); }
@@ -7272,6 +7312,34 @@ function stockExportMvtCSV(){
 }
 
 
+async // Adicionar item de mobilier ao chantier activo
+function mobAddToChantier(ref,nom,qty){
+  const ch=chGetActive();
+  if(!ch){
+    alert('Sélectionnez d\'abord un chantier actif dans l\'onglet Chantiers.');
+    return;
+  }
+  ch.configs=ch.configs||[];
+  // Verificar se já existe
+  const existing=ch.configs.find(x=>x.type==='mobilier'&&x.ref===ref);
+  if(existing){
+    existing.qty=(existing.qty||0)+qty;
+  } else {
+    ch.configs.push({
+      id:'mob'+Date.now(),
+      type:'mobilier',
+      ref,
+      label:nom||ref,
+      detail:qty+' unité'+(qty>1?'s':''),
+      qty,
+      snap:null
+    });
+  }
+  chSave();
+  renderChantierGlobal();
+  syncStatus('➕ Ajouté au chantier "'+ch.nom+'"','#16a34a',2000);
+}
+
 async function renderMobilierStock(){
   // Standalone Mobilier tab — catalogue complet + ajout stock
   let panel = document.getElementById('mob-right-panel');
@@ -7358,7 +7426,9 @@ async function renderMobilierStock(){
             <td style="padding:7px 10px;text-align:right">
               <button onclick="mobEditItem('${item.ref.replace(/'/g,"\'")}',${i})" style="padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">✏ Éditer</button>
             </td>
-            <td style="padding:4px;text-align:center">
+            </td>
+            <td style="padding:4px;text-align:center;display:flex;gap:4px;align-items:center">
+              <button onclick="mobAddToChantier(item.ref,item.nom||item.designation||item.ref,+item.qty||1)" style="padding:3px 6px;border-radius:5px;border:1px solid #16a34a;background:#f0fdf4;color:#15803d;font-size:11px;font-weight:700;cursor:pointer" title="Ajouter au chantier">➕</button>
               <button onclick="mobDeleteItem('${item.ref.replace(/'/g,"\'")}',true)" style="background:none;border:none;color:var(--red2);cursor:pointer;font-size:14px;padding:2px 4px" title="Supprimer">×</button>
             </td>
           </tr>`).join('')}
