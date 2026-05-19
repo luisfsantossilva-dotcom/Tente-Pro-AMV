@@ -2513,8 +2513,8 @@ function switchProfile(prof, tabEl){
   document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
   if(tabEl) tabEl.classList.add('active');
   $('params-body').innerHTML = paramsHTML(prof);
-  // Chantier sélectionné — toujours visible en haut
-  setTimeout(renderChantierGlobal, 10);
+  // Chantier sélectionné — render APRÈS que params-body est rempli
+  setTimeout(renderChantierGlobal, 150);
   const rHTML = rideauxHTML(prof);
   $('sec-rideaux').style.display = rHTML ? 'block' : 'none';
   $('rideaux-body').innerHTML = rHTML;
@@ -5190,12 +5190,23 @@ function cmdSaveDraft(patch){
 
 function renderChantierGlobal(){
   const inner=document.getElementById('chantier-global-inner');
-  if(inner){ inner.innerHTML=chantierLeft(); bindInputs(); }
+  if(!inner) return;
+  inner.innerHTML=chantierLeft();
+  // Ligar apenas os inputs do bloco chantier — NÃO bindInputs() global
+  // que reinicializa os parâmetros do calculador
+  _bindChantierInputs(inner);
+}
+
+function _bindChantierInputs(container){
+  // Ligar oninput aos inputs do bloco chantier sem tocar no resto
+  container.querySelectorAll('input[id^="ch-"],textarea[id^="ch-"]').forEach(el=>{
+    // já têm oninput inline — nada a fazer
+  });
 }
 
 function renderCommande(){
   const inner=document.getElementById('cmd-params-inner');
-  if(inner){ inner.innerHTML=chantierLeft(); bindInputs(); }
+  if(inner){ inner.innerHTML=chantierLeft(); _bindChantierInputs(inner); }
   // Actualizar a view central de chantiers
   const cv=document.getElementById('chantier-view');
   if(cv&&cv.style.display!=='none') cv.innerHTML=chantierRight();
@@ -8771,6 +8782,8 @@ const SB = {
   key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxeW1ob2lma3Nld2FtYXFlaHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2MDUwNDksImV4cCI6MjA5MzE4MTA0OX0.QsC4N7unPrpjHIxUoyUmipDcIzqQZ0bbp7UznFKiSE0',
   online: false,
   async req(method, table, body, params='') {
+    // Si quota dépassé ou désactivé — ne pas faire de requête
+    if(this._disabled) return null;
     try {
       const url = this.url+'/rest/v1/'+table+(params||'');
       const r = await fetch(url, {
@@ -8783,7 +8796,20 @@ const SB = {
         },
         body: body ? JSON.stringify(body) : undefined
       });
-      if(!r.ok){const t=await r.text();console.warn('SB',method,table,r.status,t);return null;}
+      if(!r.ok){
+        const t=await r.text();
+        console.warn('SB',method,table,r.status,t);
+        // 402 = quota dépassée — désactiver SB complètement
+        if(r.status===402){
+          this.online=false;
+          this._disabled=true;
+          localStorage.setItem('sb_disabled','1');
+          const ind=document.getElementById('sb-indicator');
+          if(ind){ind.textContent='☁ SB quota';ind.style.color='#dc2626';ind.title='Quota Supabase dépassé — mode local';}
+          console.warn('SB quota exceeded — switching to localStorage only');
+        }
+        return null;
+      }
       const ct=r.headers.get('content-type')||'';
       return ct.includes('json') ? r.json() : null;
     } catch(e){console.warn('SB offline',e.message);return null;}
@@ -8793,10 +8819,15 @@ const SB = {
   patch(table,body,params){ return this.req('PATCH',table,body,params||''); },
   del(table,params) { return this.req('DELETE',table,null,params||''); },
   async ping() {
+    if(this._disabled) return false;
     const r = await this.get('tp_configs','?limit=1');
     this.online = Array.isArray(r);
     const ind = document.getElementById('sb-indicator');
-    if(ind){ ind.textContent=this.online?'☁ SB ●':'☁ SB ○'; ind.style.color=this.online?'#16a34a':'#dc2626'; }
+    if(ind){
+      ind.textContent = this._disabled ? '☁ SB quota' : (this.online ? '● SB' : '○ SB');
+      ind.style.color = this._disabled ? '#dc2626' : (this.online ? '#16a34a' : '#dc2626');
+      if(this._disabled) ind.title='Quota dépassé — données sauvées en local';
+    }
     return this.online;
   }
 };
@@ -9013,6 +9044,15 @@ async function mobDeleteItem(ref,fromMobPanel){
 
 /* ─── INIT ─── */
 async function initSupabase(){
+  // Restaurer état désactivé si quota précédemment dépassé
+  if(localStorage.getItem('sb_disabled')==='1'){
+    SB._disabled=true; SB.online=false;
+    const ind=document.getElementById('sb-indicator');
+    if(ind){ind.textContent='☁ SB quota';ind.style.color='#dc2626';ind.title='Quota dépassé — cliquez pour réessayer';}
+    // Bouton pour réessayer manuellement
+    if(ind) ind.onclick=()=>{localStorage.removeItem('sb_disabled');SB._disabled=false;initSupabase();};
+    return;
+  }
   await SB.ping();
   if(SB.online){
     // Migrer configs locales si Supabase vide (une seule fois)
