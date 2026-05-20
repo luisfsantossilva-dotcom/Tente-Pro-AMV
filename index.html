@@ -580,6 +580,8 @@ const P93={
       if(q.cristal>0)add(base+' – Cristal',q.cristal);if(q.fenetre>0)add(base+' – Fenêtre',q.fenetre);
       if(q.secours>0)add(base+' – Sortie de secours',q.secours);RTR[it.sz]=q;
     }
+    // Barre tension rideau — même qté et dimension que les rideaux
+    for(const sz of [2,3,4,5]){if((RT[sz]||0)>0)add('Barre tension rideau '+sz+'m',RT[sz]);}
     const brrLabel=(H==='H2.3')?'Barre de fermeture H2,3':(H==='H3')?'Barre de fermeture H3':'Barre de fermeture H4';
     add(brrLabel,bar);
     let sd=0,ss=0,ts=0;
@@ -744,6 +746,7 @@ const P240={
     const B=[];const addB=(base,tot,mode,no,cr,fe,se)=>{if(!tot)return null;const q=resolveColors(tot,mode,no,cr,fe,se);if(q.error)return{error:base+': total couleurs ('+q.used+') > total ('+q.total+').'};if(q.blanc>0)B.push({name:base+' – Blanc',qty:q.blanc,color:'blanc'});if(q.noir>0)B.push({name:base+' – Noir',qty:q.noir,color:'noir'});if(q.cristal>0)B.push({name:base+' – Cristal',qty:q.cristal,color:'cristal'});if(q.fenetre>0)B.push({name:base+' – Fenêtre',qty:q.fenetre,color:'fenetre'});if(q.secours>0)B.push({name:base+' – Secours',qty:q.secours,color:'secours'});return{ok:true};};
     const rmap={'2':r2T,'3':r3T,'5':r5T};
     for(const sz of ['2','3','5']){const tot=rmap[sz];if(!tot)continue;const res2=addB('Rideau '+sz+'m',tot,p['r'+sz+'_mode']||'mixte',p['r'+sz+'_noir'],p['r'+sz+'_cristal'],p['r'+sz+'_fenetre'],sz==='5'?p.r5_secours:sz==='3'?p.r3_secours:null);if(res2&&res2.error)return{error:res2.error};}
+    for(const sz of ['2','3','5']){if(rmap[sz]>0)A.set('Barre tension rideau '+sz+'m',(A.get('Barre tension rideau '+sz+'m')||0)+rmap[sz]);}
     const pSp=resolveColors(piT,p.p_mode||'mixte',p.p_noir,p.p_cristal,0,0);if(pSp.error)return{error:'Pignons: total couleurs ('+pSp.used+') > total ('+pSp.total+').'};
     const pgl=f.pgl;if(pSp.blanc>0)B.push({name:pgl+' – Blanc',qty:pSp.blanc,color:'blanc'});if(pSp.noir>0)B.push({name:pgl+' – Noir',qty:pSp.noir,color:'noir'});if(pSp.cristal>0)B.push({name:pgl+' – Cristal',qty:pSp.cristal,color:'cristal'});
     const bSp=resolveColors(bT,p.b_mode||'mixte',p.b_noir,p.b_cristal,0,0);if(bSp.error)return{error:'Bâches: total couleurs ('+bSp.used+') > total ('+bSp.total+').'};
@@ -841,10 +844,9 @@ const P334={
     addA('Câble 46m (6872mm)',d.cab46*cs);if(d.cabRally)addA(d.cabRally[0],d.cabRally[1]*cs);
     // Rideaux P334: ri5[0] includes 2 pignons base → scale pignon part
     // ri5T: (2+pIn) pignons × per_pig_ri5 rideaux + modules contribution
-    const per_pig_ri5=(d.ri5[0]-2)/2;
-    const ri5T=Math.round((2+pIn)*per_pig_ri5 + d.ri5[1]*(N-1));
-    const ri2T=Math.round((d.ri2||0)/2*(2+pIn));   // ri2/2 per pignon × (2+pIn)
-    const ri3T=Math.round((d.ri3pig||0)/2*(2+pIn)); // ri3pig/2 per pignon × (2+pIn)
+    const ri5T=Math.round(d.ri5[0] + d.ri5[1]*(N-1) + (d.ri5[0]/2)*pIn);
+    const ri2T=Math.round((d.ri2||0) + (d.ri2||0)/2*pIn);
+    const ri3T=Math.round((d.ri3pig||0) + (d.ri3pig||0)/2*pIn);
     const bacT=N,pigT=2+pIn;
     const B=[];const addB=(base,tot,mode,no,cr,fe)=>{if(!tot)return null;const q=resolveColors(tot,mode||'mixte',no,cr,fe,null);if(q.error)return{error:base+': total couleurs ('+q.used+') > total ('+q.total+').'};if(q.blanc>0)B.push({name:base+' – Blanc',qty:q.blanc,color:'blanc'});if(q.noir>0)B.push({name:base+' – Noir',qty:q.noir,color:'noir'});if(q.cristal>0)B.push({name:base+' – Cristal',qty:q.cristal,color:'cristal'});if(q.fenetre>0)B.push({name:base+' – Fenêtre',qty:q.fenetre,color:'fenetre'});if(q.secours>0)B.push({name:base+' – Secours',qty:q.secours,color:'secours'});return{ok:true};};
     if(ri5T>0) addA('Barre tension rideau 5m',ri5T);
