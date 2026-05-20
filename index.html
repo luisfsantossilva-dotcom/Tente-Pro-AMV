@@ -307,9 +307,14 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
 <!-- LEFT -->
 <div class="left np">
 
-  <div class="sec" id="sec-chantier-global">
+  <div class="sec" id="sec-chantier-global" style="position:relative">
     <div class="sec-hdr" onclick="togSec(this)">🗂 Chantier &amp; client</div>
     <div class="sec-body" id="chantier-global-inner"></div>
+    <div id="ch-sync-overlay" style="display:none;position:absolute;inset:0;background:rgba(15,23,42,.7);backdrop-filter:blur(2px);z-index:10;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;text-align:center">
+      <div id="ch-sync-msg" style="font-size:12px;font-weight:800;color:#fff;letter-spacing:.3px">⏳ Synchronisation en cours…</div>
+      <button onclick="initSupabase()" style="padding:7px 16px;border-radius:6px;border:none;background:#b91c1c;color:#fff;font-size:11.5px;font-weight:800;font-family:var(--font);cursor:pointer">🔄 Synchroniser maintenant</button>
+      <div style="font-size:10px;color:rgba(255,255,255,.5)">Les chantiers sont en lecture seule<br>jusqu'à la synchronisation</div>
+    </div>
   </div>
 
   <!-- PARAMS (injecté selon profil) -->
@@ -326,8 +331,8 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
 
   <!-- SAVES -->
   <div class="sec">
-    <div class="sec-hdr" onclick="togSec(this)">💾 Configurations sauvegardées</div>
-    <div class="sec-body">
+    <div class="sec-hdr closed" onclick="togSec(this)">💾 Configurations sauvegardées</div>
+    <div class="sec-body closed">
       <div style="position:relative;margin-bottom:8px"><span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);pointer-events:none">🔍</span><input id="saves-search" type="text" placeholder="Nom, profil, dimensions…" oninput="filterSaves(this.value)" style="width:100%;padding:5px 9px 5px 28px;border:1px solid var(--border2);border-radius:20px;font-size:12px;font-family:var(--font);background:var(--bg3);color:var(--text);outline:none"></div>
       <div id="saves-list"><div style="font-size:12px;color:var(--text3)">Aucune configuration</div></div>
     </div>
@@ -335,7 +340,6 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
 
   <div style="padding:11px 13px;border-top:1px solid var(--border);display:flex;gap:8px;margin-top:auto;">
     <button class="tbtn" onclick="resetOv()">↺ Reset ajustements</button>
-    <button class="tbtn" onclick="clearAll()">🗑️ Effacer tout</button>
   </div>
 </div>
 
@@ -387,6 +391,9 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
       <div class="csum" id="csum"></div>
       <table class="rtab"><thead><tr><th>Élément</th><th class="r">Qté</th><th class="r"><span class="pchk"></span></th></tr></thead><tbody id="tbodyB"></tbody></table>
       <button onclick="addOvRow('B')" style="margin:4px 0 2px;padding:3px 10px;font-size:10px;font-weight:700;border-radius:5px;border:1.5px dashed var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-family:var(--font);width:100%">＋ Ajouter un textile</button>
+    </div>
+    <div style="padding:8px 4px 2px;text-align:right">
+      <button onclick="clearAll()" style="padding:3px 10px;font-size:10px;font-weight:700;border-radius:5px;border:1.5px solid rgba(185,28,28,.25);background:transparent;color:var(--red);cursor:pointer;font-family:var(--font)" title="Réinitialise tous les paramètres et la liste de matériel">🗑 Effacer tout le configurateur</button>
     </div>
     <div class="rc C" id="rc-plancher" style="display:none">
       <div class="rc-hdr"><span class="rc-title"><span style="display:inline-block;width:4px;height:14px;background:#92400e;border-radius:2px"></span>C — Plancher</span><span class="rc-count" id="cnt-C">—</span></div>
@@ -7818,9 +7825,12 @@ const SB = {
     if(this._disabled)return false;
     const ind=document.getElementById('sb-indicator');
     if(ind){ind.textContent='☁ SB ⏳';ind.style.color='#d97706';}
+    chSyncOverlay(true,'⏳ Synchronisation en cours…');
     const r = await this.get('tp_configs','?limit=1');
     this.online = Array.isArray(r);
     if(ind){ ind.textContent=this.online?'☁ SB ●':'☁ SB ○'; ind.style.color=this.online?'#16a34a':'#dc2626'; }
+    if(this.online) chSyncOverlay(false);
+    else chSyncOverlay(true,'❌ Hors ligne — données non synchronisées');
     return this.online;
   }
 };
@@ -7831,7 +7841,7 @@ const SB = {
 // ══════════════════════════════════════════════════════
 
 let CH_DATA = JSON.parse(localStorage.getItem('tp_chantiers_data')||'[]');
-let CH_AID  = localStorage.getItem('tp_chantiers_aid')||null;
+let CH_AID  = null; // Sempre começa sem chantier seleccionado
 
 function chSave(){
   localStorage.setItem('tp_chantiers_data',JSON.stringify(CH_DATA));
@@ -7857,25 +7867,19 @@ async function chLoadFromSB(){
   if(!SB.online) return;
   const rows=await SB.get('tp_chantiers','?order=out_date.desc&limit=200');
   if(!Array.isArray(rows)) return;
-  // Merge: combinar SB + local, SB ganha em caso de mesmo ID
-  const sbMap={};
-  rows.forEach(r=>{ sbMap[r.id]={
+  if(rows.length===0 && CH_DATA.length>0){
+    // SB vazio — upload inicial de todos os locais
+    syncStatus('📤 Sync initial…','#2563eb',0);
+    for(const ch of CH_DATA) await chSaveToSB(ch);
+    syncStatus('✅ '+CH_DATA.length+' chantiers synchronisés','#16a34a',2000);
+    return;
+  }
+  // SB é a fonte de verdade — substitui local
+  CH_DATA=rows.map(r=>({
     id:r.id, ref:r.ref||'', nom:r.nom||'', client:r.client||'',
     tel:r.tel||'', addr:r.addr||'', out:r.out_date||'', in:r.in_date||'',
     notes:r.notes||'', configs:Array.isArray(r.configs)?r.configs:[]
-  };});
-  // Adicionar locais que não estão no SB e fazer upload deles
-  const toUpload=[];
-  for(const ch of CH_DATA){
-    if(!sbMap[ch.id]){ sbMap[ch.id]=ch; toUpload.push(ch); }
-  }
-  // Upload dos locais em falta no SB
-  if(toUpload.length){
-    syncStatus('📤 Sync '+toUpload.length+' chantier(s)…','#2563eb',0);
-    for(const ch of toUpload) await chSaveToSB(ch);
-    syncStatus('✅ Sync OK','#16a34a',2000);
-  }
-  CH_DATA=Object.values(sbMap);
+  }));
   chSave();
   renderChantierGlobal();
 }
@@ -8261,6 +8265,13 @@ function printChantier(){
 }
 
 // ── ACTIONS ─────────────────────────────────────────
+function chSyncOverlay(show,msg){
+  const ov=document.getElementById('ch-sync-overlay');
+  if(!ov) return;
+  ov.style.display=show?'flex':'none';
+  if(msg){const m=document.getElementById('ch-sync-msg');if(m)m.textContent=msg;}
+}
+
 function chSearchInline(q){
   const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'');
   const ql=norm((q||'').toLowerCase().trim());
@@ -8552,6 +8563,7 @@ async function mobDeleteItem(ref,fromMobPanel){
 async function initSupabase(){
   const ind0=document.getElementById('sb-indicator');
   if(ind0){ind0.textContent='☁ SB ⏳';ind0.style.color='#d97706';}
+  chSyncOverlay(true,'⏳ Synchronisation en cours…');
   if(localStorage.getItem('sb_disabled')==='1'){
     SB._disabled=true;SB.online=false;
     const ind=document.getElementById('sb-indicator');
