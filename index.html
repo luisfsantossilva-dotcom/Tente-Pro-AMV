@@ -7839,8 +7839,8 @@ function chSave(){
 
 // Sync chantiers → Supabase (upsert chaque chantier modifié)
 async function chSaveToSB(ch){
-  if(!SB.online||!ch) return;
-  await SB.upsert('tp_chantiers',{
+  if(!SB.online||!ch) return null;
+  return await SB.upsert('tp_chantiers',{
     id:ch.id, ref:ch.ref||'', nom:ch.nom||'', client:ch.client||'',
     tel:ch.tel||'', addr:ch.addr||'', out_date:ch.out||null, in_date:ch.in||null,
     notes:ch.notes||'', configs:ch.configs||[]
@@ -7855,12 +7855,19 @@ async function chDeleteFromSB(id){
 async function chLoadFromSB(){
   if(!SB.online) return;
   const rows=await SB.get('tp_chantiers','?order=out_date.desc&limit=200');
-  if(!Array.isArray(rows)) return;
+  console.log('[CH] SB rows:', rows);
+  if(!Array.isArray(rows)){
+    console.warn('[CH] SB get failed'); return;
+  }
   if(rows.length===0 && CH_DATA.length>0){
-    // SB vazio mas temos dados locais — fazer upload inicial
     syncStatus('📤 Migration chantiers vers Supabase…','#2563eb',0);
-    for(const ch of CH_DATA) await chSaveToSB(ch);
-    syncStatus('✅ '+CH_DATA.length+' chantiers synchronisés','#16a34a',3000);
+    let ok=0;
+    for(const ch of CH_DATA){
+      const r=await chSaveToSB(ch);
+      console.log('[CH] upsert',ch.nom,'→',r);
+      if(r!==null) ok++;
+    }
+    syncStatus('✅ '+ok+'/'+CH_DATA.length+' chantiers synchronisés','#16a34a',3000);
     return;
   }
   // SB tem dados — é a fonte de verdade
