@@ -729,7 +729,7 @@ const P240={
     addA('Tube 60×60 lumière',tL);addA('Tube 60×60',t6);addA('Tube 120×80 rainuré',t12);
     addA('Barre fermeture 4m',bf4);addA('Barre fermeture 5m',bf5);
     if(sab==='oui'){addA('Sablière double',sabD);addA('Sablière simple',sabS);}
-    if(blocs>0){addA('Bloc béton 500 kg',blocs);addA("Sangle d'arrimage",sangl);}
+    if(blocs>0){addA('Bloc béton 500 kg',blocs);addA("Sangle d'arrimage",sangl);addA('Goupille L',blocs);}
     addA('Plaque câble Pilier (double)',pcP);addA('Plaque câble Faîte (simple)',pcF);
     addA('Câble pilier '+pt+' ('+this.DIM.cp[H]+' mm)',cP);addA('Câble toit '+w+'m ('+this.DIM.ct[w]+' mm)',cT);
     addA('Barre tension petit',ptT);addA('Barre tension bâche 5m',ten5);
@@ -854,7 +854,7 @@ const P334={
     if(ri3T>0) addA('Barre tension rideau 3m',ri3T);
     const errs=[addB('Rideau 5m',ri5T,p.ri5_mode,p.ri5_noir,p.ri5_cristal,p.ri5_fenetre,p.ri5_secours),addB('Rideau 2m',ri2T,p.ri2_mode,p.ri2_noir,p.ri2_cristal,null),addB('Rideau 3m',ri3T,p.ri3_mode,p.ri3_noir,p.ri3_cristal,null),addB(d.bache,bacT,p.b_mode,p.b_noir,p.b_cristal,null),addB(d.pignLabel,pigT,p.p_mode,p.p_noir,p.p_cristal,null)].filter(e=>e&&e.error);
     if(errs.length)return{error:errs[0].error};
-    const P334_ORD=[/^Piquet noir/i,/^Barre tension petit/i,/^Plaque de base P240/i,/^Goupille L P240/i,/^Piquet \d/i,/^Goupille L P334/i,/^Plaque de base P334/i,/^Goupille Pilier/i,/^Vis M20.140/i,/^Faîte/i,/^Pilier P4/i,/^Ferme /i,/^Rallonge ferme/i,/^Tube 60.60 lumi/i,/^Tube 60.60$/i,/^Tube 120.80 rainuré/i,/^Tube 120.80 lisse/i,/^Bracon pilier/i,/^Bracon faite/i,/^Barre fermeture 4/i,/^Barre fermeture 5/i,/^Barre fermeture 7/i,/^Barre tension bâche 5/i,/^Barre tension bâche [23]/i,/^Tube 120.80 pignon coupe droite/i,/^Tube 120.80 pignons coupe gauche/i,/^Tube 120.80 sans pipo/i,/^Tube rond 5.* sans pipo/i,/^Tube rond 5.* avec pipo/i,/^Tube rond 2.* avec pipo/i,/^Tube rond 3.* sans pipo/i,/^Ampoule/i,/^Plaque câble Gauche/i,/^Plaque câble Droite/i,/^Plaque câble pour pilier/i,/^Plaque câble double/i,/^Plaque câble faite/i,/^Vis M20.160/i,/^Câble P/i,/^Câble 46/i,/^Rallonge câble/i];
+    const P334_ORD=[/^Piquet noir/i,/^Barre tension petit/i,/^Plaque de base P240/i,/^Goupille L P240/i,/^Piquet \d/i,/^Goupille L P334/i,/^Plaque de base P334/i,/^Goupille Pilier/i,/^Vis M20.140/i,/^Ampoule/i,/^Plaque câble Gauche/i,/^Plaque câble Droite/i,/^Plaque câble pour pilier/i,/^Plaque câble double/i,/^Plaque câble faite/i,/^Vis M20.160/i,/^Câble P/i,/^Câble 46/i,/^Rallonge câble/i,/^Faîte/i,/^Pilier P4/i,/^Ferme /i,/^Rallonge ferme/i,/^Tube 60.60 lumi/i,/^Tube 60.60$/i,/^Tube 120.80 rainuré/i,/^Tube 120.80 lisse/i,/^Bracon pilier/i,/^Bracon faite/i,/^Barre fermeture 4/i,/^Barre fermeture 5/i,/^Barre fermeture 7/i,/^Barre tension bâche 5/i,/^Barre tension bâche [23]/i,/^Tube 120.80 pignon coupe droite/i,/^Tube 120.80 pignons coupe gauche/i,/^Tube 120.80 sans pipo/i,/^Tube rond 5.* sans pipo/i,/^Tube rond 5.* avec pipo/i,/^Tube rond 2.* avec pipo/i,/^Tube rond 3.* sans pipo/i];
     const p334oi=n=>{const i=P334_ORD.findIndex(r=>r.test(n));return i<0?999:i;};
     const Ar=[...A.entries()].map(([n,q])=>({name:n,qty:q})).sort((a,b)=>p334oi(a.name)-p334oi(b.name));
     // ── Module spécial automatique P334 (reste après N×5m) ──
@@ -7827,7 +7827,39 @@ const SB = {
 let CH_DATA = JSON.parse(localStorage.getItem('tp_chantiers_data')||'[]');
 let CH_AID  = localStorage.getItem('tp_chantiers_aid')||null;
 
-function chSave(){ localStorage.setItem('tp_chantiers_data',JSON.stringify(CH_DATA)); localStorage.setItem('tp_chantiers_aid',CH_AID||''); }
+function chSave(){
+  localStorage.setItem('tp_chantiers_data',JSON.stringify(CH_DATA));
+  localStorage.setItem('tp_chantiers_aid',CH_AID||'');
+}
+
+// Sync chantiers → Supabase (upsert chaque chantier modifié)
+async function chSaveToSB(ch){
+  if(!SB.online||!ch) return;
+  await SB.post('tp_chantiers',{
+    id:ch.id, ref:ch.ref||'', nom:ch.nom||'', client:ch.client||'',
+    tel:ch.tel||'', addr:ch.addr||'', out_date:ch.out||null, in_date:ch.in||null,
+    notes:ch.notes||'', configs:ch.configs||[]
+  },'?on_conflict=id');
+}
+
+async function chDeleteFromSB(id){
+  if(!SB.online||!id) return;
+  await SB.del('tp_chantiers','?id=eq.'+id);
+}
+
+async function chLoadFromSB(){
+  if(!SB.online) return;
+  const rows=await SB.get('tp_chantiers','?order=out_date.desc&limit=200');
+  if(!Array.isArray(rows)||!rows.length) return;
+  // Merge: SB é a fonte de verdade — substituir localStorage
+  CH_DATA=rows.map(r=>({
+    id:r.id, ref:r.ref||'', nom:r.nom||'', client:r.client||'',
+    tel:r.tel||'', addr:r.addr||'', out:r.out_date||'', in:r.in_date||'',
+    notes:r.notes||'', configs:Array.isArray(r.configs)?r.configs:[]
+  }));
+  chSave();
+  renderChantierGlobal();
+}
 function chGetActive(){ return CH_DATA.find(x=>x.id===CH_AID)||null; }
 
 function chInitDemo(){
@@ -8243,23 +8275,25 @@ function chUF(k,v){
   const ch=chGetActive(); if(!ch) return;
   ch[k]=v; chSave();
 }
-function chSaveChantier(){ chSave(); renderChantierGlobal(); _chUpdateView(); }
+function chSaveChantier(){ chSave(); renderChantierGlobal(); _chUpdateView(); chSaveToSB(chGetActive()); }
 function chEditChantier(){ setTimeout(()=>document.getElementById('ch-nom')?.focus(),50); }
 function chNewChantier(){
   const id='ch'+Date.now();
-  CH_DATA.unshift({id,ref:'',nom:'',client:'',tel:'',addr:'',out:'',in:'',notes:'',configs:[]});
-  CH_AID=id; chSave(); renderChantierGlobal(); _chUpdateView();
+  const _newCh={id,ref:'',nom:'',client:'',tel:'',addr:'',out:'',in:'',notes:'',configs:[]};
+  CH_DATA.unshift(_newCh);
+  CH_AID=id; chSave(); renderChantierGlobal(); _chUpdateView(); chSaveToSB(_newCh);
 }
 function chDupliquer(){
   const ch=chGetActive(); if(!ch) return;
   const nc=JSON.parse(JSON.stringify(ch)); nc.id='ch'+Date.now(); nc.nom+=' (copie)';
-  CH_DATA.unshift(nc); CH_AID=nc.id; chSave(); renderChantierGlobal(); _chUpdateView();
+  CH_DATA.unshift(nc); CH_AID=nc.id; chSave(); renderChantierGlobal(); _chUpdateView(); chSaveToSB(nc);
 }
 function chSupprimer(){
   const ch=chGetActive(); if(!ch) return;
   if(!confirm('Supprimer "'+ch.nom+'" ?')) return;
+  const _delId=CH_AID;
   CH_DATA=CH_DATA.filter(x=>x.id!==CH_AID);
-  CH_AID=CH_DATA[0]?.id||null; chSave(); renderChantierGlobal(); _chUpdateView();
+  CH_AID=CH_DATA[0]?.id||null; chSave(); renderChantierGlobal(); _chUpdateView(); chDeleteFromSB(_delId);
 }
 function chShowSearch(){
   const q=prompt('Rechercher:'); if(!q) return;
@@ -8283,7 +8317,7 @@ function chAjouterType(type){
 function chRemoveConfig(cfgId){
   const ch=chGetActive(); if(!ch) return;
   ch.configs=(ch.configs||[]).filter(x=>x.id!==cfgId);
-  chSave(); renderChantierGlobal(); _chUpdateView();
+  chSave(); renderChantierGlobal(); _chUpdateView(); chSaveToSB(ch);
 }
 
 // Ajouter item mobilier au chantier actif
@@ -8520,8 +8554,10 @@ async function initSupabase(){
       for(const m of lm) await SB.post('tp_mobilier',{ref:m.ref,nom:m.nom||m.designation||m.ref,designation:m.designation||m.nom||m.ref,qty:+(m.qty||0),note:m.note||''});
       if(lm.length) syncStatus('📤 Mobilier migré vers Supabase','#2563eb',3000);
     }
+    // Charger chantiers depuis Supabase
+    await chLoadFromSB();
   }
-  initSupabase();
+  renderSaves();
 }
 
 restorePersisted();
