@@ -297,7 +297,7 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
     <button class="hbtn hbtn-g" onclick="dataExport()" title="Exporter toutes les données en JSON">📤 Export</button>
     <button class="hbtn hbtn-g" onclick="dataImport()" title="Importer un fichier JSON de sauvegarde">📥 Import</button>
     <button class="hbtn hbtn-g" id="btn-sync" onclick="syncToggle()" title="Synchroniser avec un fichier (Dropbox/OneDrive)">🔄 Sync</button>
-    <span id="sb-indicator" onclick="SB.ping().then(()=>renderSaves())" title="Statut Supabase — cliquer pour reconnecter" style="font-size:11px;font-weight:800;color:#dc2626;padding:0 8px;cursor:pointer;user-select:none">☁ SB ○</span>
+    <span id="sb-indicator" onclick="initSupabase()" title="Cliquer pour synchroniser" style="font-size:11px;font-weight:800;color:#d97706;padding:0 8px;cursor:pointer;user-select:none">☁ SB ⏳</span>
     <div style="width:1px;height:20px;background:#e2e8f0;margin:0 2px"></div>
 
   </div>
@@ -7816,9 +7816,10 @@ const SB = {
   del(table,params) { return this.req('DELETE',table,null,params||''); },
   async ping() {
     if(this._disabled)return false;
+    const ind=document.getElementById('sb-indicator');
+    if(ind){ind.textContent='☁ SB ⏳';ind.style.color='#d97706';}
     const r = await this.get('tp_configs','?limit=1');
     this.online = Array.isArray(r);
-    const ind = document.getElementById('sb-indicator');
     if(ind){ ind.textContent=this.online?'☁ SB ●':'☁ SB ○'; ind.style.color=this.online?'#16a34a':'#dc2626'; }
     return this.online;
   }
@@ -7855,27 +7856,26 @@ async function chDeleteFromSB(id){
 async function chLoadFromSB(){
   if(!SB.online) return;
   const rows=await SB.get('tp_chantiers','?order=out_date.desc&limit=200');
-  console.log('[CH] SB rows:', rows);
-  if(!Array.isArray(rows)){
-    console.warn('[CH] SB get failed'); return;
-  }
-  if(rows.length===0 && CH_DATA.length>0){
-    syncStatus('📤 Migration chantiers vers Supabase…','#2563eb',0);
-    let ok=0;
-    for(const ch of CH_DATA){
-      const r=await chSaveToSB(ch);
-      console.log('[CH] upsert',ch.nom,'→',r);
-      if(r!==null) ok++;
-    }
-    syncStatus('✅ '+ok+'/'+CH_DATA.length+' chantiers synchronisés','#16a34a',3000);
-    return;
-  }
-  // SB tem dados — é a fonte de verdade
-  CH_DATA=rows.map(r=>({
+  if(!Array.isArray(rows)) return;
+  // Merge: combinar SB + local, SB ganha em caso de mesmo ID
+  const sbMap={};
+  rows.forEach(r=>{ sbMap[r.id]={
     id:r.id, ref:r.ref||'', nom:r.nom||'', client:r.client||'',
     tel:r.tel||'', addr:r.addr||'', out:r.out_date||'', in:r.in_date||'',
     notes:r.notes||'', configs:Array.isArray(r.configs)?r.configs:[]
-  }));
+  };});
+  // Adicionar locais que não estão no SB e fazer upload deles
+  const toUpload=[];
+  for(const ch of CH_DATA){
+    if(!sbMap[ch.id]){ sbMap[ch.id]=ch; toUpload.push(ch); }
+  }
+  // Upload dos locais em falta no SB
+  if(toUpload.length){
+    syncStatus('📤 Sync '+toUpload.length+' chantier(s)…','#2563eb',0);
+    for(const ch of toUpload) await chSaveToSB(ch);
+    syncStatus('✅ Sync OK','#16a34a',2000);
+  }
+  CH_DATA=Object.values(sbMap);
   chSave();
   renderChantierGlobal();
 }
@@ -8550,6 +8550,8 @@ async function mobDeleteItem(ref,fromMobPanel){
 
 /* ─── INIT ─── */
 async function initSupabase(){
+  const ind0=document.getElementById('sb-indicator');
+  if(ind0){ind0.textContent='☁ SB ⏳';ind0.style.color='#d97706';}
   if(localStorage.getItem('sb_disabled')==='1'){
     SB._disabled=true;SB.online=false;
     const ind=document.getElementById('sb-indicator');
