@@ -7855,8 +7855,15 @@ async function chDeleteFromSB(id){
 async function chLoadFromSB(){
   if(!SB.online) return;
   const rows=await SB.get('tp_chantiers','?order=out_date.desc&limit=200');
-  if(!Array.isArray(rows)||!rows.length) return;
-  // Merge: SB é a fonte de verdade — substituir localStorage
+  if(!Array.isArray(rows)) return;
+  if(rows.length===0 && CH_DATA.length>0){
+    // SB vazio mas temos dados locais — fazer upload inicial
+    syncStatus('📤 Migration chantiers vers Supabase…','#2563eb',0);
+    for(const ch of CH_DATA) await chSaveToSB(ch);
+    syncStatus('✅ '+CH_DATA.length+' chantiers synchronisés','#16a34a',3000);
+    return;
+  }
+  // SB tem dados — é a fonte de verdade
   CH_DATA=rows.map(r=>({
     id:r.id, ref:r.ref||'', nom:r.nom||'', client:r.client||'',
     tel:r.tel||'', addr:r.addr||'', out:r.out_date||'', in:r.in_date||'',
