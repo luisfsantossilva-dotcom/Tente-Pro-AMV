@@ -724,7 +724,7 @@ const P240={
     else addA('Plaque de base',tpL);
     addA('Piquet noir',piqN); // fixe: 8 piquets noirs
     addA('Piquet '+(p.piquetSize||'50')+' cm',piq50+Math.round(f.ptb/2)*4*pIn); // +plaques/pig×4 par pignon extra
-    addA('Goupille L',gL);addA('Goupille Ferme',gFb+gFS);addA('Goupille Faîte',gFi);
+    addA('Goupille L',gL);addA('Goupille Ferme',gFb+(sab==='oui'?Math.max(0,sabD+sabS-2):0));addA('Goupille Faîte',gFi);
     addA('Faîte',fai);addA('Pilier '+pt,pil);addA('Ferme '+w+' m ('+this.DIM.fm[w]+' mm)',fer);
     addA('Tube 60×60 lumière',tL);addA('Tube 60×60',t6);addA('Tube 120×80 rainuré',t12);
     addA('Barre fermeture 4m',bf4);addA('Barre fermeture 5m',bf5);
@@ -7807,6 +7807,11 @@ const SB = {
   },
   get(table,params) { return this.req('GET',table,null,params||''); },
   post(table,body)  { return this.req('POST',table,body,''); },
+  upsert(table,body,conflict='id') {
+    if(this._disabled) return null;
+    const url=this.url+'/rest/v1/'+table;
+    return fetch(url,{method:'POST',headers:{'apikey':this.key,'Authorization':'Bearer '+this.key,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation','on-conflict':conflict},body:JSON.stringify(body)}).then(r=>r.ok?r.json():null).catch(()=>null);
+  },
   patch(table,body,params){ return this.req('PATCH',table,body,params||''); },
   del(table,params) { return this.req('DELETE',table,null,params||''); },
   async ping() {
@@ -7835,11 +7840,11 @@ function chSave(){
 // Sync chantiers → Supabase (upsert chaque chantier modifié)
 async function chSaveToSB(ch){
   if(!SB.online||!ch) return;
-  await SB.post('tp_chantiers',{
+  await SB.upsert('tp_chantiers',{
     id:ch.id, ref:ch.ref||'', nom:ch.nom||'', client:ch.client||'',
     tel:ch.tel||'', addr:ch.addr||'', out_date:ch.out||null, in_date:ch.in||null,
     notes:ch.notes||'', configs:ch.configs||[]
-  },'?on_conflict=id');
+  },'id');
 }
 
 async function chDeleteFromSB(id){
