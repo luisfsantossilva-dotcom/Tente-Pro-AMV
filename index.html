@@ -321,7 +321,6 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
   <div class="sec" style="background:rgba(185,28,28,.04);border-left:3px solid rgba(185,28,28,.35);margin-left:-1px;">
     <div class="sec-hdr" onclick="togSec(this)" id="params-hdr" style="color:var(--text2)">📐 Paramètres</div>
     <div class="sec-body" id="params-body"></div>
-    <div style="text-align:right;padding:4px 15px 8px"><span onclick="resetOv()" style="font-size:10px;font-weight:700;color:var(--text3);cursor:pointer;padding:2px 8px;border:1px solid var(--border);border-radius:20px;background:var(--bg3)" title="Réinitialiser les ajustements manuels">↺ reset</span></div>
   </div>
 
   <!-- RIDEAUX (injecté selon profil) -->
@@ -505,7 +504,7 @@ const P93={
   T60:{2:2,3:2,4:2,5:2,6:2,7:2,8:2,9:3,10:3,12:3},
   BPP:{2:0,3:0,4:0,5:0,6:1,7:1,8:1,9:2,10:2,12:2},
   PIG:{2:{tu:{2:1},ri:{2:1}},3:{tu:{3:1},ri:{3:1}},4:{tu:{4:1},ri:{4:1}},5:{tu:{5:1},ri:{5:1}},6:{tu:{3:2},ri:{3:2}},7:{tu:{3.5:2},ri:{4:1,3:1}},8:{tu:{4:2},ri:{4:2}},9:{tu:{3:3},ri:{3:3}},10:{tu:{3:2,4:1},ri:{3:2,4:1}},12:{tu:{4:3},ri:{4:3}}},
-  ORD:["Arceau","Tube 60×40 (avec lumière)","Tube 60×40","Tube 30×30","Tube rond 2 m","Tube rond 3 m","Tube rond 3.5 m","Tube rond 4 m","Tube rond 5 m","Croix","Câble de toit","Barre de fermeture","Ferme","Pilier 93/50 H2,3 – 4 gorges avec Pied","Pilier 93/50 H2,3 – 4 gorges","Pilier 93/50 H2,3 – avec Pied","Pilier 93/50 H2,3 – normal","Pilier 93/50 H3 – avec Pied","Pilier 93/50 H3 – normal","Pilier 93/50 H4 – avec Pied","Pilier 93/50 H4 – normal","Faîte","Bracon","Portique 3 m","Portique 6 m","Piquet","Sablière double","Sablière simple","Boulon M10×110","Boulon M10×90","Boulon M10×70","Bloc de béton","Sangle d'arrimage","Plaque pour plancher","Vis pour plancher","Rideau","Bâche toiture","Pignon","Ampoule"],
+  ORD:["Tube 60×40","Tube 30×30","Tube 60×40 (avec lumière)","Croix","Tube rond","Ferme","Barre de fermeture","Bracon","Pilier 93/50 H2,3 – 4 gorges","Pilier 93/50 H2,3","Pilier 93/50","Câble de toit","Faîte","Piquet","Boulon M10×110","Boulon M10×90","Boulon M10×70","Sablière double","Sablière simple","Portique 3 m","Portique 6 m","Barre tension rideau","Bloc de béton","Sangle d'arrimage","Plaque pour plancher","Vis pour plancher","Ampoule"],
   TX:["Rideau","Bâche toiture","Pignon"],
   hMm(H){const v=parseFloat(String(H||'').replace('H','').replace(',','.'));return isFinite(v)?Math.round(v*1000+300):null;},
   cCroix(m){return 2*(1+Math.floor((m-1)/4));},
@@ -680,7 +679,7 @@ const P240={
   FX:{10:{bf4:2,bf5:2,t5:6,t2p:0,t3p:0,r5:6,r2p:0,r3p:0,tp12p:4,tp12s:0,tr5a:0,tr5s:1,tr3s:0,pgl:'Pignon complet 10m',ptb:2},12:{bf4:4,bf5:0,t5:6,t2p:2,t3p:0,r5:6,r2p:2,r3p:0,tp12p:4,tp12s:0,tr5a:0,tr5s:1,tr3s:0,pgl:'Pignon complet 12m',ptb:4},15:{bf4:4,bf5:0,t5:8,t2p:0,t3p:0,r5:8,r2p:0,r3p:0,tp12p:0,tp12s:0,tr5a:6,tr5s:2,tr3s:0,pgl:'Pignon complet 15m',ptb:4},16:{bf4:4,bf5:2,t5:6,t2p:0,t3p:4,r5:8,r2p:0,r3p:4,tp12p:4,tp12s:0,tr5a:0,tr5s:1,tr3s:4,pgl:'Pignon complet 16m',ptb:6},20:{bf4:4,bf5:2,t5:10,t2p:0,t3p:0,r5:10,r2p:0,r3p:0,tp12p:4,tp12s:2,tr5a:2,tr5s:1,tr3s:0,pgl:'Pignon complet 20m',ptb:6},25:{bf4:4,bf5:4,t5:12,t2p:0,t3p:0,r5:12,r2p:0,r3p:0,tp12p:4,tp12s:4,tr5a:0,tr5s:2,tr3s:0,pgl:'Pignon complet 25m',ptb:8}},
   DIM:{fm:{10:5390,12:6442,15:8017,16:8678,20:10648,25:13277},ct:{10:6675,12:7681,15:8764,16:9536,20:11286,25:13716},bm:{10:11845,12:13949,15:17099,16:18421,20:22361,25:27619},cp:{H3:5490,H4:6077,H5:6950}},
   CA:{pcp:4,pcf:4,cp:4,ct:4},
-  ORD:[/Plaque de base pilier/i,/Plaque de base pignon/i,/^Plaque de base$/i,/Vis M20/i,/Piquet noir/i,/Piquet \d/i,/Goupille L/i,/Goupille Ferme/i,/Goupille Faîte/i,/^Faîte$/i,/^Pilier /i,/^Ferme /i,/Tube 60×60 lum/i,/^Tube 60×60$/i,/Tube 120×80 rain/i,/Barre ferm.*4m/i,/Barre ferm.*5m/i,/Sablière double/i,/Sablière simple/i,/Bloc béton/i,/Sangle/i,/Plaque câble Pil/i,/Plaque câble Faî/i,/^Câble pil/i,/^Câble toit/i,/Barre tension pet/i,/Barre tension bâche/i,/Tube 120×80 avec/i,/Tube 120×80 sans/i,/Tube rond/i,/Ampoule/i],
+  ORD:[/Piquet noir/i,/Barre tension petit/i,/Goupille L/i,/Goupille Ferme/i,/Goupille Faîte/i,/Plaque câble Pil/i,/Plaque câble Faî/i,/^Plaque de base$/i,/Vis M20/i,/Piquet \d/i,/^Câble pil/i,/^Câble toit/i,/Ampoule/i,/^Faîte$/i,/^Pilier /i,/^Ferme /i,/Tube 60×60 lum/i,/^Tube 60×60$/i,/Tube 120×80 rain/i,/Barre ferm.*4m/i,/Barre ferm.*5m/i,/Sablière double/i,/Sablière simple/i,/Bloc béton/i,/Sangle/i,/Barre tension bâche 5/i,/Barre tension bâche [23]/i,/Barre tension bâche/i,/Tube 120×80 avec/i,/Tube 120×80 sans/i,/Tube rond 5.*avec/i,/Tube rond 5.*sans/i,/Tube rond 3.*sans/i,/Barre tension rideau 2/i,/Barre tension rideau 3/i,/Barre tension rideau 5/i,/Plaque de base pilier/i,/Plaque de base pignon/i],
   pt(H){return H==='H3'?'P2,6':H==='H4'?'P3,6':'P5';},
   mcab(N){return Math.ceil(N/4);},
   build(p){
@@ -2384,7 +2383,9 @@ function renderA(rows){
   const dateOut=gv('dateOut')||'';
   const dateBack=gv('dateBack')||'';
   const PD_LOCK=['Fermette 2m','Fermette 1m','Verin','Pilier H50','Pilier H80','Pilier H100'];
+  const P93_HIDDEN=['Arceau']; // Ocultos temporariamente — não apagar
   rows.forEach(r=>{
+    if(S.profile==='p93'&&P93_HIDDEN.includes(r.name)) return; // ocultar sem apagar
     const isOv=r.ov||OV[r.name]!==undefined;
     const isLocked=S.profile==='pontdanse'&&PD_LOCK.some(k=>r.name===k||r.name.startsWith(k));
     const tr=document.createElement('tr');
@@ -2552,10 +2553,11 @@ function updateBadges(res,p){
 function setOv(n,v){OV[n]=Math.max(0,Math.floor(+v||0));autoCalc();}
 function clrOv(n){delete OV[n];autoCalc();}
 function resetOv(){
+  console.log('[resetOv] OV before:', JSON.stringify(OV));
   Object.keys(OV).forEach(k=>delete OV[k]);
   if(window.OV_EXTRA){OV_EXTRA.A=[];OV_EXTRA.B=[];}
-  // Also remove extra rows from DOM
   document.querySelectorAll('tr[data-extra-sec]').forEach(r=>r.remove());
+  console.log('[resetOv] OV after:', JSON.stringify(OV));
   autoCalc();
 }
 
