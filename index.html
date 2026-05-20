@@ -2130,7 +2130,7 @@ function switchProfile(prof, tabEl){
     const eb=$('err'); if(eb){eb.textContent='';eb.className='err';}
     const cp=document.getElementById('cont-right-panel'); if(cp){cp.style.display='none';cp.innerHTML='';}
     const cmdp=document.getElementById('cmd-right-panel'); if(cmdp){cmdp.style.display='none';cmdp.innerHTML='';}
-    document.querySelectorAll('.rc.B').forEach(e=>e.style.display='');
+    document.querySelectorAll('.rc').forEach(e=>e.style.display='');
     const rg=document.querySelector('.rg'); if(rg)rg.style.display='';
     const vw=document.getElementById('viz-wrap'); if(vw)vw.style.display='';
     const tb=document.querySelector('.topbar'); if(tb)tb.style.display='';
