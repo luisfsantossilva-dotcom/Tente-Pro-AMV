@@ -2,6 +2,8 @@
 <html>
 <head>
 <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TentoPro v14 — Chantiers</title>
 <style>
@@ -12,7 +14,7 @@
   --text:#111827;--text2:#4b5563;--text3:#9ca3af;
   --border:#e5e7eb;--border2:#d1d5db;
   --green:#16a34a;--blue:#2563eb;
-  --font:'Segoe UI',system-ui,sans-serif;
+  --font:'Nunito','Segoe UI',system-ui,sans-serif;
   --r:8px;--rl:12px;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -50,6 +52,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .sec-hdr.closed::after{content:"▸";}
 .sec-body{padding:13px 15px;}
 .sec-body.closed{display:none;}
+.ch-list-item:hover{background:rgba(185,28,28,.09)!important;}
 
 /* FORMS */
 .fg{display:flex;flex-direction:column;gap:4px;}
@@ -278,28 +281,25 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
   <div class="hdr-company" id="company-display">Constructeur du Modulaire</div>
   <div class="hdr-sep"></div>
   <div class="prof-tabs">
-    <div class="ptab" data-profile="commande" onclick="switchProfile('commande',this)" style="background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.4);">📋 Chantiers</div>
+    <div class="ptab" data-profile="commande" onclick="switchProfile('commande',this)">Chantiers</div>
     <div class="ptab active" data-profile="p93" onclick="switchProfile('p93',this)">P93/50</div>
     <div class="ptab" data-profile="p240" onclick="switchProfile('p240',this)">P240</div>
     <div class="ptab" data-profile="p334" onclick="switchProfile('p334',this)">P334</div>
     <div class="ptab" data-profile="pontdanse" onclick="switchProfile('pontdanse',this)">Pont-danse</div>
-    <div class="ptab" data-profile="pagode" onclick="switchProfile('pagode',this)">🏯 Pagode</div>
-    <div class="ptab" data-profile="plancher" onclick="switchProfile('plancher',this)">🪵 Plancher</div>
-    <div class="ptab" data-profile="container" onclick="switchProfile('container',this)" style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.9);">📦 Container</div>
-    <div class="ptab" data-profile="stock" onclick="switchProfile('stock',this)" style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.9);">📦 Stock</div>
-    <div class="ptab" data-profile="chauffage" onclick="switchProfile('chauffage',this)" style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.9);">🔥 Chauffage</div>
-    <div class="ptab" data-profile="mobilier" onclick="switchProfile('mobilier',this)">🪑 Mobilier</div>
+    <div class="ptab" data-profile="pagode" onclick="switchProfile('pagode',this)">Pagode</div>
+    <div class="ptab" data-profile="plancher" onclick="switchProfile('plancher',this)">Plancher</div>
+    <div class="ptab" data-profile="container" onclick="switchProfile('container',this)">Container</div>
+    <div class="ptab" data-profile="stock" onclick="switchProfile('stock',this)">Stock</div>
+    <div class="ptab" data-profile="chauffage" onclick="switchProfile('chauffage',this)">Chauffage</div>
+    <div class="ptab" data-profile="mobilier" onclick="switchProfile('mobilier',this)">Mobilier</div>
   </div>
-  <div class="hdr-right">
-    <span style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;" title="Recalcul auto"></span>
-    <!-- Data management -->
-    <span id="sync-status" title="Sync" style="font-size:10px;color:#64748b;display:flex;align-items:center;gap:3px"></span>
-    <button class="hbtn hbtn-g" onclick="dataExport()" title="Exporter toutes les données en JSON">📤 Export</button>
-    <button class="hbtn hbtn-g" onclick="dataImport()" title="Importer un fichier JSON de sauvegarde">📥 Import</button>
-    <button class="hbtn hbtn-g" id="btn-sync" onclick="syncToggle()" title="Synchroniser avec un fichier (Dropbox/OneDrive)">🔄 Sync</button>
-    <span id="sb-indicator" onclick="initSupabase()" title="Cliquer pour synchroniser" style="font-size:11px;font-weight:800;color:#d97706;padding:0 8px;cursor:pointer;user-select:none">☁ SB ⏳</span>
-    <div style="width:1px;height:20px;background:#e2e8f0;margin:0 2px"></div>
-
+  <div class="hdr-right" style="gap:2px;">
+    <span id="sync-status" style="display:none"></span>
+    <div style="width:1px;height:20px;background:rgba(255,255,255,.25);margin:0 4px;flex-shrink:0"></div>
+    <button class="hbtn hbtn-g" onclick="dataExport()" title="Exporter toutes les données en JSON" style="padding:5px 8px;font-size:14px;background:transparent;border-color:transparent;color:rgba(255,255,255,.8)">📤</button>
+    <button class="hbtn hbtn-g" onclick="dataImport()" title="Importer un fichier JSON de sauvegarde" style="padding:5px 8px;font-size:14px;background:transparent;border-color:transparent;color:rgba(255,255,255,.8)">📥</button>
+    <button class="hbtn hbtn-g" id="btn-sync" onclick="syncToggle()" title="Synchroniser avec un fichier (Dropbox/OneDrive)" style="padding:5px 8px;font-size:14px;background:transparent;border-color:transparent;color:rgba(255,255,255,.8)">🔄</button>
+    <span id="sb-indicator" onclick="initSupabase()" title="Cliquer pour synchroniser" style="font-size:11px;font-weight:800;color:#d97706;padding:0 6px;cursor:pointer;user-select:none">☁ SB ⏳</span>
   </div>
 </div>
 
@@ -384,6 +384,7 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
       <table class="rtab"><thead><tr><th>Pièce</th><th class="r">Qté</th><th class="r">Stock</th><th class="r">Ajuster</th><th class="r"><span class="pchk"></span></th></tr></thead><tbody id="tbodyA"></tbody></table>
       <button onclick="addOvRow('A')" style="margin:4px 0 2px;padding:3px 10px;font-size:10px;font-weight:700;border-radius:5px;border:1.5px dashed var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-family:var(--font);width:100%">＋ Ajouter une pièce</button>
     </div>
+    <div style="padding:6px 4px 2px;text-align:right"><button onclick="clearAll()" style="padding:3px 10px;font-size:10px;font-weight:700;border-radius:5px;border:1.5px solid rgba(185,28,28,.25);background:transparent;color:var(--red);cursor:pointer;font-family:var(--font)" title="Réinitialise tous les paramètres et la liste de matériel">🗑 Effacer tout le configurateur</button></div>
     <div class="rc B">
       <div class="rc-hdr"><span class="rc-title"><span class="bar-y"></span>B — Textile</span><span class="rc-count" id="cnt-B">—</span></div>
       <div class="csum" id="csum"></div>
@@ -952,18 +953,19 @@ const PDANSE={
     const tbBarr2=_cnt(allSegs,2);
     const tbBarr1=_cnt(allSegs,1);
     const A=[];
-    if(ferm2m>0)A.push({name:'Fermette 2m',qty:ferm2m});
-    if(ferm1m>0)A.push({name:'Fermette 1m',qty:ferm1m});
     A.push({name:'Verin',qty:verins});
     A.push({name:'Pilier '+H,qty:piliers});
-    if(pan.p4>0)A.push({name:'Panneau triplis 4x1m',qty:pan.p4});
-    if(pan.p2>0)A.push({name:'Panneau triplis 2x1m',qty:pan.p2});
-    if(pan.p1>0)A.push({name:'Panneau triplis 1x1m',qty:pan.p1});
-    A.push({name:'Poteau barriere',qty:ptBarr});A.push({name:'Poteau frein',qty:ptFrein});
+    A.push({name:'Poteau barriere',qty:ptBarr});
+    A.push({name:'Poteau frein',qty:ptFrein});
+    if(ferm2m>0)A.push({name:'Fermette 2m',qty:ferm2m});
+    if(ferm1m>0)A.push({name:'Fermette 1m',qty:ferm1m});
     if(tbBarr4>0)A.push({name:'Tube barriere 4m',qty:tbBarr4});
     if(tbBarr3>0)A.push({name:'Tube barriere 3m',qty:tbBarr3});
     if(tbBarr2>0)A.push({name:'Tube barriere 2m',qty:tbBarr2});
     if(tbBarr1>0)A.push({name:'Tube barriere 1m',qty:tbBarr1});
+    if(pan.p4>0)A.push({name:'Panneau triplis 4x1m',qty:pan.p4});
+    if(pan.p2>0)A.push({name:'Panneau triplis 2x1m',qty:pan.p2});
+    if(pan.p1>0)A.push({name:'Panneau triplis 1x1m',qty:pan.p1});
     A.push({name:this.STAIRS[H]||this.STAIRS.H50,qty:1});
     const des=p.designation||('Pont-danse '+W+'x'+L+'m - '+H);
     const warnOdd=(remW||remL)?' - Dim. impaire: verifier decoupe':'';
@@ -1311,11 +1313,7 @@ function drawPontDanse(W, L, hM){
   for(let ly=0;ly<L;){
     const panH = (ly+2<=L) ? 2 : 1;  // 2m panel or 1m remainder
     for(let lx=0;lx<W;lx++){
-      // Alternate colours: darker for 1m remainder rows
-      const isRem = panH===1;
-      const shade = isRem
-        ? ((lx)%2===0 ? '#bae6fd' : '#a5d8f3')     // lighter for 1m remnant
-        : ((lx+ly/2)%2===0 ? C_FLOOR : C_FLOOR_S);  // standard 2m panels
+      const shade = (lx+Math.floor(ly/2))%2===0 ? C_FLOOR : C_FLOOR_S;
       svg+=poly([s(lx,ly,BEAM_H),s(lx+1,ly,BEAM_H),s(lx+1,ly+panH,BEAM_H),s(lx,ly+panH,BEAM_H)],shade,'#93c5fd',0.5);
       // Panel separation line within each 2m panel (at the 1m mark)
       if(panH===2){
@@ -1325,11 +1323,7 @@ function drawPontDanse(W, L, hM){
     ly+=panH;
   }
 
-  // ── 2. Front and right faces of the deck (the "box" sides) ──
-  // Right side (y=L face)
-  svg+=poly([s(0,L,0),s(W,L,0),s(W,L,BEAM_H),s(0,L,BEAM_H)],'#c7d2fe','#6366f1',0.5,0.6);
-  // Right W face
-  svg+=poly([s(W,0,0),s(W,L,0),s(W,L,BEAM_H),s(W,0,BEAM_H)],'#a5b4fc','#6366f1',0.5,0.5);
+  // ── 2. Face sides — supprimés (côtés ouverts)
 
   // ── 3. Piliers/Vérins (tous les 2m + 1m si impair) ──
   // Build grid positions
@@ -1344,9 +1338,8 @@ function drawPontDanse(W, L, hM){
       const top=s(lx,ly,BEAM_H);
       const bot=s(lx,ly,0);
       const isEdge=(lx===0||lx===W||ly===0||ly===L);
-      const isOddGap=(lx===W&&W%2!==0)||(ly===L&&L%2!==0);
       const sw=isEdge?2:1.5;
-      const col=isOddGap?'#60a5fa':(isEdge?C_PILIER:'#3b82f6');
+      const col=isEdge?C_PILIER:'#3b82f6';
       svg+=seg(bot,top,sw,col);
       svg+=`<circle cx="${top[0].toFixed(1)}" cy="${top[1].toFixed(1)}" r="${isEdge?3:2}" fill="${col}"/>`;
       svg+=`<circle cx="${bot[0].toFixed(1)}" cy="${bot[1].toFixed(1)}" r="${isEdge?2.5:1.5}" fill="${col}" opacity="0.6"/>`;
@@ -1429,17 +1422,17 @@ function drawPontDanse(W, L, hM){
   svg+=seg(s(stairW,-stairD,0),s(stairW,0,BEAM_H),1.5,'#d97706');
 
   // ── 8. Labels ──
-  const lbl=s(W/2,L/2,BEAM_H);
-  svg+=`<text x="${(lbl[0]).toFixed(0)}" y="${(lbl[1]-8).toFixed(0)}" text-anchor="middle" font-size="10" fill="#1e3a5f" font-weight="700" font-family="sans-serif">Pont-danse ${W}×${L}m · H${(BEAM_H*100).toFixed(0)}cm</text>`;
+  // Titre — style tente, coin sup gauche
+  svg+=`<text x="8" y="15" font-size="9.5" fill="#475569" font-weight="600" font-family="sans-serif">Pont-danse ${W}×${L}m · H${(BEAM_H*100).toFixed(0)}cm</text>`;
 
-  // Dimension W
-  const dw1=s(0,L+0.3,0),dw2=s(W,L+0.3,0);
+  // Dimension W (largeur)
+  const dw1=s(0,-1.2,0),dw2=s(W,-1.2,0);
   svg+=seg(dw1,dw2,1,'#64748b');
-  svg+=`<text x="${((dw1[0]+dw2[0])/2).toFixed(0)}" y="${((dw1[1]+dw2[1])/2+10).toFixed(0)}" text-anchor="middle" font-size="9" fill="#64748b" font-family="sans-serif">${W}m</text>`;
-  // Dimension L
-  const dl1=s(W+0.3,0,0),dl2=s(W+0.3,L,0);
+  svg+=`<text x="${(dw1[0]-12).toFixed(0)}" y="${(dw1[1]-6).toFixed(0)}" text-anchor="end" font-size="9" fill="#64748b" font-family="sans-serif">${W}m</text>`;
+  // Dimension L (longueur)
+  const dl1=s(W+1.2,0,0),dl2=s(W+1.2,L,0);
   svg+=seg(dl1,dl2,1,'#64748b');
-  svg+=`<text x="${((dl1[0]+dl2[0])/2+14).toFixed(0)}" y="${((dl1[1]+dl2[1])/2).toFixed(0)}" text-anchor="middle" font-size="9" fill="#64748b" font-family="sans-serif">${L}m</text>`;
+  svg+=`<text x="${((dl1[0]+dl2[0])/2+32).toFixed(0)}" y="${((dl1[1]+dl2[1])/2).toFixed(0)}" text-anchor="middle" font-size="9" fill="#64748b" font-family="sans-serif">${L}m</text>`;
 
   svg+='</svg>';
 
@@ -7976,7 +7969,7 @@ function chantierLeft(){
     const isActive=d.id===CH_AID;
     const bg=isActive?'rgba(185,28,28,.09)':'transparent';
     const dot=isActive?'var(--red)':'var(--border2)';
-    listHTML+='<div data-nom="'+(d.nom||'').toLowerCase()+'" data-ref="'+(d.ref||'').toLowerCase()+'" data-client="'+(d.client||'').toLowerCase()+'" onclick="chSel(\''+d.id+'\')" style="display:flex;align-items:center;gap:6px;padding:3px 5px;border-radius:5px;cursor:pointer;background:'+bg+'" onmouseover="this.style.background=\'rgba(185,28,28,.09)\'" onmouseout="this.style.background=\''+bg+'\'">'
+    listHTML+='<div data-nom="'+(d.nom||'').toLowerCase()+'" data-ref="'+(d.ref||'').toLowerCase()+'" data-client="'+(d.client||'').toLowerCase()+'" onclick="chSel(\''+d.id+'\')" style="display:flex;align-items:center;gap:6px;padding:3px 5px;border-radius:5px;cursor:pointer;background:'+bg+'" class="ch-list-item">'
       +'<div style="width:5px;height:5px;border-radius:50%;background:'+dot+';flex-shrink:0"></div>'
       +'<span style="font-size:11.5px;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(d.nom||'(sans nom)')+'</span>'
       +'<span style="font-size:10px;color:var(--text3)">'+esc(d.ref||'')+'</span>'
