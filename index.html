@@ -2139,9 +2139,9 @@ function switchProfile(prof, tabEl){
     // Appel render avec try/catch et log
     setTimeout(()=>{
       try{
-        renderMobilierStock();
+        renderMobilierTab();
       }catch(err){
-        console.error('[switchProfile mobilier] renderMobilierStock a planté:',err);
+        console.error('[switchProfile mobilier] renderMobilierTab a planté:',err);
         if(mp) mp.innerHTML='<div style="padding:24px"><div style="background:#fee;border:1.5px solid #f99;border-radius:8px;padding:16px;color:#900;font-size:13px"><b>⚠ Erreur Mobilier :</b><br>'+(err&&err.message?err.message:String(err))+'<br><br><button onclick="localStorage.removeItem(\'cdm_mob_stock\');location.reload()" style="padding:6px 12px;border-radius:6px;border:none;background:#dc2626;color:#fff;font-weight:700;cursor:pointer">🔄 Réinitialiser le catalogue local</button></div></div>';
       }
     },50);
@@ -2484,7 +2484,10 @@ function calcAddToCommande(){
   } else {
     ch.configs.push({id:'cfg'+Date.now(),type:S.profile,label:lbl,detail:autoLbl,snap});
   }
-  chSave(); renderChantierGlobal();
+  chSave();
+  // Sync vers Supabase (sans bloquer ; offline → reste en local)
+  if(typeof chSaveToSB==='function') chSaveToSB(ch);
+  renderChantierGlobal();
   const btn=document.getElementById('btn-add-chantier');
   if(btn){
     btn.textContent='✅ '+ch.nom.substring(0,18);
@@ -6488,14 +6491,156 @@ function stockExportMvtCSV(){
 }
 
 
-async function renderMobilierStock(){
-  // Standalone Mobilier tab — catalogue complet + ajout stock
-  let panel = document.getElementById('mob-right-panel');
+// ──────────────────────────────────────────
+// MOBILIER TAB — Ajout au chantier actif uniquement
+// (la gestion du catalogue/stock se fait dans l'onglet Stock → catégorie Mobilier)
+// ──────────────────────────────────────────
+
+// Retourne {ref: qty} des items mobilier déjà dans le chantier actif
+function _mobChantierMap(ch){
+  const map={};
+  (ch && Array.isArray(ch.configs) ? ch.configs : []).filter(c=>c && c.type==='mobilier' && c.ref).forEach(c=>{
+    map[c.ref]=(map[c.ref]||0)+(+c.qty||0);
+  });
+  return map;
+}
+
+// Définir la qté d'un mobilier dans le chantier actif (0 = retirer)
+function mobSetQtyInChantier(ref, qty, nom){
+  const ch=chGetActive();
+  if(!ch){ alert('Sélectionnez d\'abord un chantier.'); return; }
+  qty=Math.max(0,+qty||0);
+  ch.configs=ch.configs||[];
+  // Retirer toute config mobilier existante pour cette ref
+  ch.configs=ch.configs.filter(c=>!(c && c.type==='mobilier' && c.ref===ref));
+  if(qty>0){
+    ch.configs.push({id:'mob'+Date.now()+Math.floor(Math.random()*1000),type:'mobilier',ref,label:nom||ref,detail:qty+' unité'+(qty>1?'s':''),qty,snap:null});
+  }
+  chSave();
+  if(typeof chSaveToSB==='function') chSaveToSB(ch);
+  renderMobilierTab();
+  if(typeof renderChantierGlobal==='function') renderChantierGlobal();
+}
+
+// Ajout libre (ref + qty), avec création optionnelle dans le catalogue stock
+function mobTabAddFree(){
+  const ch=chGetActive();
+  if(!ch){ alert('Sélectionnez d\'abord un chantier.'); return; }
+  const ref=(document.getElementById('mobtab-free-ref')?.value||'').trim();
+  const qty=Math.max(1,parseInt(document.getElementById('mobtab-free-qty')?.value)||1);
+  if(!ref){ alert('Référence obligatoire.'); return; }
+  const stock=mobGetStockLocal();
+  const inStock=stock.find(m=>m.ref===ref);
+  const nom=inStock?(inStock.nom||inStock.designation||ref):ref;
+  // Cumul si déjà présent
+  const current=_mobChantierMap(ch)[ref]||0;
+  mobSetQtyInChantier(ref,current+qty,nom);
+  // Reset input
+  const r=document.getElementById('mobtab-free-ref'); if(r)r.value='';
+  const q=document.getElementById('mobtab-free-qty'); if(q)q.value='1';
+}
+
+async function renderMobilierTab(){
+  let panel=document.getElementById('mob-right-panel');
+  if(!panel){
+    const right=document.querySelector('.right');
+    if(right){
+      panel=document.createElement('div');
+      panel.id='mob-right-panel';
+      panel.style.cssText='padding:14px 16px;overflow-y:auto;';
+      right.appendChild(panel);
+    }
+  }
+  if(!panel) return;
+  panel.style.display='block';
+
+  try{
+    const ch=chGetActive();
+    if(!ch){
+      panel.innerHTML=`<div style="padding:24px 20px">
+        <div style="font-size:15px;font-weight:900;color:var(--text);margin-bottom:6px">🪑 Mobilier</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Sélectionnez d'abord un chantier pour ajouter du mobilier.</div>
+        <button onclick="switchProfile('commande',document.querySelector('.ptab[data-profile=\\'commande\\']'))" style="padding:8px 16px;border-radius:7px;border:none;background:var(--red);color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:var(--font)">→ Ouvrir les chantiers</button>
+        <div style="margin-top:24px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.5">
+          💡 <b>Astuce :</b> pour gérer le <b>catalogue mobilier</b> (créer/modifier des références, ajuster les quantités en stock), allez dans l'onglet <b>Stock</b> puis cliquez sur la catégorie <b>🪑 Mobilier</b>.
+        </div>
+      </div>`;
+      return;
+    }
+
+    let stock=mobGetStockLocal();
+    if(!Array.isArray(stock)) stock=[];
+    const chMap=_mobChantierMap(ch);
+    // Toutes les refs : stock + items libres déjà ajoutés au chantier
+    const stockRefs=stock.map(m=>m.ref);
+    const allRefs=[...new Set([...stockRefs, ...Object.keys(chMap)])];
+    const totalInCh=Object.values(chMap).reduce((s,n)=>s+n,0);
+
+    let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)">
+      <div>
+        <div style="font-size:14px;font-weight:900;color:var(--text)">🪑 Mobilier — ${esc(ch.nom||'(sans nom)')}</div>
+        <div style="font-size:11px;color:var(--text3)">${totalInCh} pièce(s) dans ce chantier · ${stock.length} référence(s) au catalogue</div>
+      </div>
+      <button onclick="switchProfile('stock',document.querySelector('.ptab[data-profile=\\'stock\\']'));setTimeout(()=>{S.stockCat='Mobilier';if(typeof renderStock==='function')renderStock();},100)" style="padding:5px 11px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)" title="Gérer le catalogue dans l'onglet Stock">📦 Gérer le catalogue</button>
+    </div>`;
+
+    // Ajout libre (en haut, toujours visible)
+    h+=`<div style="background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--rl);padding:10px 12px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">➕ Ajout rapide</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input id="mobtab-free-ref" type="text" placeholder="Référence (ex: TABLE-180)" style="flex:1;padding:6px 9px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);background:var(--bg);color:var(--text)" onkeydown="if(event.key==='Enter')mobTabAddFree()">
+        <input id="mobtab-free-qty" type="number" min="1" value="1" style="width:60px;padding:6px 9px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);background:var(--bg);color:var(--text);text-align:center" onkeydown="if(event.key==='Enter')mobTabAddFree()">
+        <button onclick="mobTabAddFree()" style="padding:6px 14px;border-radius:6px;border:none;background:var(--red);color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:var(--font)">+</button>
+      </div>
+    </div>`;
+
+    if(allRefs.length===0){
+      h+=`<div style="text-align:center;padding:30px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);color:var(--text3);font-size:12px;line-height:1.6">
+        Aucun mobilier au catalogue.<br>Allez dans <b>Stock → 🪑 Mobilier</b> pour créer vos premières références,<br>ou utilisez l'ajout rapide ci-dessus.
+      </div>`;
+    } else {
+      h+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
+        <div style="padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:flex;justify-content:space-between">
+          <span>Catalogue</span>
+          <span>Au chantier</span>
+        </div>`;
+      allRefs.forEach(ref=>{
+        const m=stock.find(x=>x.ref===ref);
+        const nom=m?(m.nom||m.designation||ref):ref;
+        const stockQty=m?+m.qty||0:null;
+        const inCh=chMap[ref]||0;
+        const refA=String(ref).replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const nomA=String(nom).replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        h+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:${inCh>0?'rgba(185,28,28,.05)':'transparent'}">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12.5px;font-weight:800;color:${inCh>0?'var(--red)':'var(--text)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(nom)}</div>
+            <div style="font-size:10.5px;color:var(--text3)"><b>${esc(ref)}</b>${stockQty!==null?' · stock: '+stockQty:' · <i>libre</i>'}${m&&m.note?' · '+esc(m.note):''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+            <button onclick="mobSetQtyInChantier('${refA}',${Math.max(0,inCh-1)},'${nomA}')" style="width:26px;height:26px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:14px;font-weight:900">−</button>
+            <input type="number" value="${inCh}" min="0" onchange="mobSetQtyInChantier('${refA}',+this.value,'${nomA}')" style="width:48px;text-align:center;padding:3px;border:1.5px solid var(--border);border-radius:5px;font-size:13px;font-weight:800;color:${inCh>0?'var(--red)':'var(--text)'};font-family:var(--font);background:var(--bg)">
+            <button onclick="mobSetQtyInChantier('${refA}',${inCh+1},'${nomA}')" style="width:26px;height:26px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:14px;font-weight:900">+</button>
+          </div>
+        </div>`;
+      });
+      h+='</div>';
+    }
+    panel.innerHTML=h;
+  }catch(err){
+    console.error('[renderMobilierTab]',err);
+    panel.innerHTML=`<div style="padding:24px"><div style="background:#fee;border:1.5px solid #f99;border-radius:8px;padding:16px;color:#900;font-size:13px"><b>⚠ Erreur Mobilier :</b><br>${esc(err.message||String(err))}</div></div>`;
+  }
+}
+
+async function renderMobilierStock(panelId){
+  // CRUD catalogue mobilier — utilisable depuis l'onglet Mobilier ou l'onglet Stock
+  panelId = panelId || 'mob-right-panel';
+  let panel = document.getElementById(panelId);
   if(!panel){
     const right = document.querySelector('.right');
     if(right){
       panel = document.createElement('div');
-      panel.id = 'mob-right-panel';
+      panel.id = panelId;
       panel.style.cssText = 'padding:14px 16px;overflow-y:auto;display:none;';
       right.appendChild(panel);
     }
@@ -6640,6 +6785,12 @@ function renderStock(){
   const panel=document.getElementById('stock-right-panel');
   if(panel){
     panel.style.display='block';
+    // Catégorie spéciale Mobilier → afficher le CRUD mobilier
+    if(S.stockCat==='Mobilier'){
+      try{ renderMobilierStock('stock-right-panel'); }
+      catch(e){ console.error('[renderStock mobilier]',e); panel.innerHTML='<div style="padding:24px;color:#900">Erreur: '+esc(e.message||String(e))+'</div>'; }
+      return;
+    }
     if(S.stockView==='dashboard') panel.innerHTML=stockDashboard();
     else if(S.stockSelected) panel.innerHTML=stockDetail();
     else panel.innerHTML=stockList();
@@ -6652,12 +6803,20 @@ function stockParamsLeft(){
   const total=pieces.length;
   const withQty=pieces.filter(p=>(p.qty||0)>0).length;
   const totalMvt=stockGetMovements().length;
+  // Stats mobilier
+  const mobStock=mobGetStockLocal();
+  const mobTotal=mobStock.length;
+  const mobWithQty=mobStock.filter(m=>(+m.qty||0)>0).length;
   return `
     <div style="margin-bottom:10px">
       <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">Catégories</div>
       <button onclick="S.stockCat='';S.stockSelected='';renderStock()" style="width:100%;display:flex;align-items:center;gap:8px;padding:6px 10px;margin-bottom:3px;border-radius:7px;border:1.5px solid ${!S.stockCat?'var(--red)':'var(--border)'};background:${!S.stockCat?'var(--red-dim)':'var(--bg3)'};cursor:pointer;font-family:var(--font);text-align:left">
         <span>📦</span><span style="font-size:11px;font-weight:700;color:${!S.stockCat?'var(--red)':'var(--text)'}">Tout</span>
         <span style="margin-left:auto;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;background:${!S.stockCat?'var(--red)':'var(--bg4)'};color:${!S.stockCat?'#fff':'var(--text2)'}">${total}</span>
+      </button>
+      <button onclick="S.stockCat='Mobilier';S.stockSelected='';renderStock()" style="width:100%;display:flex;align-items:center;gap:8px;padding:6px 10px;margin-bottom:3px;border-radius:7px;border:1.5px solid ${S.stockCat==='Mobilier'?'var(--red)':'var(--border)'};background:${S.stockCat==='Mobilier'?'var(--red-dim)':'var(--bg3)'};cursor:pointer;font-family:var(--font);text-align:left">
+        <span>🪑</span><span style="font-size:11px;font-weight:700;color:${S.stockCat==='Mobilier'?'var(--red)':'var(--text)'}">Mobilier</span>
+        <span style="margin-left:auto;font-size:9px;font-weight:700;color:${mobWithQty>0?'#16a34a':'#9ca3af'}">${mobWithQty}/${mobTotal}</span>
       </button>
       ${cats.map(cat=>{
         const cnt=pieces.filter(p=>p.cat===cat).length;
@@ -8344,9 +8503,15 @@ function _chUpdateView(){
     if(cv) cv.innerHTML=chantierRight();
   }
 }
+let _chUfTimer=null;
 function chUF(k,v){
   const ch=chGetActive(); if(!ch) return;
   ch[k]=v; chSave();
+  // Sync debounced — évite spam HTTP pendant la frappe
+  if(_chUfTimer) clearTimeout(_chUfTimer);
+  _chUfTimer=setTimeout(()=>{
+    if(typeof chSaveToSB==='function') chSaveToSB(ch);
+  },800);
 }
 function chSaveChantier(){ chSave(); renderChantierGlobal(); _chUpdateView(); chSaveToSB(chGetActive()); }
 function chEditChantier(){ setTimeout(()=>document.getElementById('ch-nom')?.focus(),50); }
@@ -8401,7 +8566,9 @@ function mobAddToChantier(ref,nom,qty){
   const ex=ch.configs.find(x=>x.type==='mobilier'&&x.ref===ref);
   if(ex){ex.qty=(ex.qty||0)+qty;}
   else ch.configs.push({id:'mob'+Date.now(),type:'mobilier',ref,label:nom||ref,detail:qty+' unité'+(qty>1?'s':''),qty,snap:null});
-  chSave(); renderChantierGlobal(); syncStatus('➕ Ajouté au chantier "'+ch.nom+'"','#16a34a',2000);
+  chSave();
+  if(typeof chSaveToSB==='function') chSaveToSB(ch);
+  renderChantierGlobal(); syncStatus('➕ Ajouté au chantier "'+ch.nom+'"','#16a34a',2000);
 }
 
 // filterSaves
