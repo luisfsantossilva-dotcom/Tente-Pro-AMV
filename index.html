@@ -615,6 +615,7 @@ const P93={
     if(bq.blanc>0)add(bl+' – Blanc',bq.blanc);if(bq.noir>0)add(bl+' – Noir',bq.noir);if(bq.cristal>0)add(bl+' – Cristal',bq.cristal);
     let b70=(4*arc)+(4*cf)+(2*bra)+3*p6;const ex=Math.max(0,(p3+p6)-1);
     if(ex>0){b70+=2*ex;add('Boulon M10×90',ex);}add('Boulon M10×70',b70);
+    const A=[],B=[];
     // ── Module spécial P93: 2m ou 4m final module ──
     if(remL93===2||remL93===4){
       const smL=remL93; // 2 ou 4
@@ -661,7 +662,6 @@ const P93={
     }
     const oi=n=>{const i=this.ORD.findIndex(o=>n===o||n.startsWith(o));return i<0?999:i;};
     const entries=Object.entries(R).sort((a,b)=>{const d=oi(a[0])-oi(b[0]);return d!==0?d:colorOrd(a[0])-colorOrd(b[0]);});
-    const A=[],B=[];
     for(const [nm,d] of entries){
       const row={name:nm,qty:d.qty,detail:d.detail};
       if(this.TX.some(px=>nm.startsWith(px))){row.color=nm.toLowerCase().includes('noir')?'noir':nm.toLowerCase().includes('cristal')?'cristal':nm.toLowerCase().includes('fenêtre')?'fenetre':nm.toLowerCase().includes('secours')?'secours':'blanc';B.push(row);}
@@ -8596,4 +8596,4 @@ setTimeout(renderChantierGlobal,200);
 
 </script>
 </body>
-</html>
+</html>Erreur interne: Cannot access 'B' before initializationErreur interne: Cannot access 'B' before initialization
