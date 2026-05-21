@@ -5,7 +5,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TentoPro v14 — Chantiers</title>
+<title>TentoPro v15 — Chantiers</title>
 <style>
 :root{
   --red:#b91c1c;--red2:#ef4444;--red-dark:#7f1d1d;--red-dim:rgba(185,28,28,.09);
@@ -2110,14 +2110,41 @@ function switchProfile(prof, tabEl){
       const el=document.getElementById(id); if(el){el.style.display='none';el.innerHTML='';}
     });
     document.querySelectorAll('.rc').forEach(e=>e.style.display='none');
-    // Show mob panel
-    const mp=document.getElementById('mob-right-panel');
-    if(mp) mp.style.display='block';
+    // Cacher la viz-print qui pourrait recouvrir
+    document.querySelectorAll('.viz-print').forEach(e=>e.style.display='none');
+    const lvb=document.getElementById('liv-block'); if(lvb)lvb.style.display='none';
+    // Show mob panel — affichage immédiat d'un placeholder pour éviter zone blanche
+    let mp=document.getElementById('mob-right-panel');
+    if(!mp){
+      // Le panel n'existe pas dans le DOM : on le crée
+      const right=document.querySelector('.right');
+      if(right){
+        mp=document.createElement('div');
+        mp.id='mob-right-panel';
+        mp.style.cssText='padding:14px 16px;overflow-y:auto;';
+        right.appendChild(mp);
+      }
+    }
+    if(mp){
+      mp.style.display='block';
+      // Placeholder immédiat tant que renderMobilierStock n'a pas tourné
+      mp.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">⏳ Chargement du catalogue mobilier…</div>';
+    }
     // Hide hdr-right buttons that don't apply
     const hdr2=document.querySelector('.hdr-right'); if(hdr2)hdr2.style.display='none';
     // Hide sec-rideaux in left panel
     const sr=$('sec-rideaux'); if(sr)sr.style.display='none';
-    setTimeout(renderMobilierStock, 50);
+    // Cacher la chantier-view au cas où
+    const cvm=document.getElementById('chantier-view'); if(cvm)cvm.style.display='none';
+    // Appel render avec try/catch et log
+    setTimeout(()=>{
+      try{
+        renderMobilierStock();
+      }catch(err){
+        console.error('[switchProfile mobilier] renderMobilierStock a planté:',err);
+        if(mp) mp.innerHTML='<div style="padding:24px"><div style="background:#fee;border:1.5px solid #f99;border-radius:8px;padding:16px;color:#900;font-size:13px"><b>⚠ Erreur Mobilier :</b><br>'+(err&&err.message?err.message:String(err))+'<br><br><button onclick="localStorage.removeItem(\'cdm_mob_stock\');location.reload()" style="padding:6px 12px;border-radius:6px;border:none;background:#dc2626;color:#fff;font-weight:700;cursor:pointer">🔄 Réinitialiser le catalogue local</button></div></div>';
+      }
+    },50);
     return;
   }
   const mob_p=document.getElementById('mob-right-panel'); if(mob_p)mob_p.style.display='none';
@@ -6461,7 +6488,7 @@ function stockExportMvtCSV(){
 }
 
 
-function renderMobilierStock(){
+async function renderMobilierStock(){
   // Standalone Mobilier tab — catalogue complet + ajout stock
   let panel = document.getElementById('mob-right-panel');
   if(!panel){
@@ -6476,95 +6503,117 @@ function renderMobilierStock(){
   if(!panel) return;
   panel.style.display = 'block';
 
-  const stock = mobGetStock();
-  const total = stock.reduce((s,m)=>s+(+m.qty||0),0);
+  // Helper : échappe pour attribut HTML (notamment onclick='...')
+  const escAttr = v => String(v==null?'':v)
+    .replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-  let h = '';
-  // ── Header ──
-  h += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--border)">
-    <div>
-      <div style="font-size:15px;font-weight:900;color:var(--text)">🪑 Mobilier</div>
-      <div style="font-size:11px;color:var(--text3)">${stock.length} référence(s) · ${total} pcs en stock</div>
-    </div>
-    <button onclick="mobExportCSV()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">📤 Export</button>
-  </div>`;
+  try{
+    let stock = await mobGetStock();
+    if(!Array.isArray(stock)) stock = [];
+    // Sécurité supplémentaire : on filtre ici aussi
+    stock = stock.filter(it => it && it.ref!=null && String(it.ref).trim()!=='');
+    const total = stock.reduce((s,m)=>s+(+m.qty||0),0);
 
-  // ── Formulaire ajout ──
-  h += `<div style="background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--rl);padding:12px;margin-bottom:14px">
-    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">➕ Nouvelle référence</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
+    let h = '';
+    // ── Header ──
+    h += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--border)">
       <div>
-        <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:3px">Référence *</label>
-        <input id="mob-new-ref" type="text" placeholder="ex: TABLE-120" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);background:var(--bg);color:var(--text)">
+        <div style="font-size:15px;font-weight:900;color:var(--text)">🪑 Mobilier</div>
+        <div style="font-size:11px;color:var(--text3)">${stock.length} référence(s) · ${total} pcs en stock</div>
       </div>
-      <div>
-        <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:3px">Désignation *</label>
-        <input id="mob-new-des" type="text" placeholder="ex: Table ronde 120cm" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);background:var(--bg);color:var(--text)">
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div>
-        <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:3px">Qté en stock</label>
-        <input id="mob-new-qty" type="number" min="0" value="0" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);background:var(--bg);color:var(--text)">
-      </div>
-      <div>
-        <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:3px">Note / Dims</label>
-        <input id="mob-new-note" type="text" placeholder="ex: Ø120cm blanc" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);background:var(--bg);color:var(--text)">
-      </div>
-    </div>
-    <button onclick="mobAddFromPanel()" style="width:100%;padding:7px;border-radius:7px;border:none;background:var(--red);color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:var(--font)">➕ Ajouter au stock</button>
-  </div>`;
-
-  // ── Catalogue ──
-  if(stock.length === 0){
-    h += `<div style="text-align:center;padding:24px;background:var(--bg2);border-radius:var(--rl);border:1px solid var(--border);color:var(--text3);font-size:12px">
-      Aucune référence mobilier.<br>Créez vos premières références ci-dessus.
+      <button onclick="mobExportCSV()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">📤 Export</button>
     </div>`;
-  } else {
-    h += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
-      <div style="padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)">Catalogue — ${stock.length} article(s)</div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="background:var(--bg3)">
-          <th style="text-align:left;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border)">Référence</th>
-          <th style="text-align:left;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border)">Désignation</th>
-          <th style="text-align:left;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border)">Note</th>
-          <th style="text-align:right;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border)">Stock</th>
-          <th style="text-align:right;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border)">Modifier</th>
-          <th style="width:32px;border-bottom:1px solid var(--border)"></th>
-        </tr></thead>
-        <tbody>
-          ${stock.map((item,i)=>`<tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:7px 10px;font-weight:800;color:var(--red);font-size:11px">${esc(item.ref)}</td>
-            <td style="padding:7px 10px;font-weight:600;color:var(--text)">${esc(item.nom||item.designation||'')}</td>
-            <td style="padding:7px 10px;color:var(--text3);font-size:11px">${esc(item.note||'')}</td>
-            <td style="padding:7px 10px;text-align:right">
-              <div style="display:inline-flex;align-items:center;gap:4px">
-                <button onclick="mobAdjQty('${item.ref.replace(/'/g,"\'")}', -1)" style="width:22px;height:22px;border-radius:4px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:13px;font-weight:900;line-height:1">−</button>
-                <span style="min-width:32px;text-align:center;font-weight:800;font-size:13px;color:var(--text)">${+item.qty||0}</span>
-                <button onclick="mobAdjQty('${item.ref.replace(/'/g,"\'")}', +1)" style="width:22px;height:22px;border-radius:4px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:13px;font-weight:900;line-height:1">+</button>
-              </div>
-            </td>
-            <td style="padding:7px 10px;text-align:right">
-              <button onclick="mobEditItem('${item.ref.replace(/'/g,"\'")}',${i})" style="padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">✏ Éditer</button>
-            </td>
-            <td style="padding:4px;text-align:center">
-              <button onclick="mobDeleteItem('${item.ref.replace(/'/g,"\'")}',true)" style="background:none;border:none;color:var(--red2);cursor:pointer;font-size:14px;padding:2px 4px" title="Supprimer">×</button>
-            </td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
+
+    // ── Formulaire ajout ──
+    h += `<div style="background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--rl);padding:12px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">➕ Nouvelle référence</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
+        <div>
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:3px">Référence *</label>
+          <input id="mob-new-ref" type="text" placeholder="ex: TABLE-120" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);background:var(--bg);color:var(--text)">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:3px">Désignation *</label>
+          <input id="mob-new-des" type="text" placeholder="ex: Table ronde 120cm" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);background:var(--bg);color:var(--text)">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:3px">Qté en stock</label>
+          <input id="mob-new-qty" type="number" min="0" value="0" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);background:var(--bg);color:var(--text)">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:3px">Note / Dims</label>
+          <input id="mob-new-note" type="text" placeholder="ex: Ø120cm blanc" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);background:var(--bg);color:var(--text)">
+        </div>
+      </div>
+      <button onclick="mobAddFromPanel()" style="width:100%;padding:7px;border-radius:7px;border:none;background:var(--red);color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:var(--font)">➕ Ajouter au stock</button>
+    </div>`;
+
+    // ── Catalogue ──
+    if(stock.length === 0){
+      h += `<div style="text-align:center;padding:24px;background:var(--bg2);border-radius:var(--rl);border:1px solid var(--border);color:var(--text3);font-size:12px">
+        Aucune référence mobilier.<br>Créez vos premières références ci-dessus.
+      </div>`;
+    } else {
+      h += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
+        <div style="padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)">Catalogue — ${stock.length} article(s)</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:var(--bg3)">
+            <th style="text-align:left;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border)">Référence</th>
+            <th style="text-align:left;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border)">Désignation</th>
+            <th style="text-align:left;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border)">Note</th>
+            <th style="text-align:right;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border)">Stock</th>
+            <th style="text-align:right;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border)">Modifier</th>
+            <th style="width:32px;border-bottom:1px solid var(--border)"></th>
+          </tr></thead>
+          <tbody>
+            ${stock.map((item,i)=>{
+              const refA = escAttr(item.ref);
+              return `<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:7px 10px;font-weight:800;color:var(--red);font-size:11px">${esc(item.ref)}</td>
+              <td style="padding:7px 10px;font-weight:600;color:var(--text)">${esc(item.nom||item.designation||'')}</td>
+              <td style="padding:7px 10px;color:var(--text3);font-size:11px">${esc(item.note||'')}</td>
+              <td style="padding:7px 10px;text-align:right">
+                <div style="display:inline-flex;align-items:center;gap:4px">
+                  <button onclick="mobAdjQty('${refA}', -1)" style="width:22px;height:22px;border-radius:4px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:13px;font-weight:900;line-height:1">−</button>
+                  <span style="min-width:32px;text-align:center;font-weight:800;font-size:13px;color:var(--text)">${+item.qty||0}</span>
+                  <button onclick="mobAdjQty('${refA}', +1)" style="width:22px;height:22px;border-radius:4px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:13px;font-weight:900;line-height:1">+</button>
+                </div>
+              </td>
+              <td style="padding:7px 10px;text-align:right">
+                <button onclick="mobEditItem('${refA}',${i})" style="padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">✏ Éditer</button>
+              </td>
+              <td style="padding:4px;text-align:center">
+                <button onclick="mobDeleteItem('${refA}',true)" style="background:none;border:none;color:var(--red2);cursor:pointer;font-size:14px;padding:2px 4px" title="Supprimer">×</button>
+              </td>
+            </tr>`;}).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    }
+
+    panel.innerHTML = h;
+  } catch(err){
+    console.error('[renderMobilierStock] Erreur:',err);
+    panel.innerHTML = `<div style="padding:24px">
+      <div style="font-size:15px;font-weight:900;color:var(--text);margin-bottom:12px">🪑 Mobilier</div>
+      <div style="background:#fee;border:1.5px solid #f99;border-radius:8px;padding:16px;color:#900;font-size:13px">
+        <div style="font-weight:800;margin-bottom:8px">⚠ Erreur d'affichage du catalogue</div>
+        <div style="font-size:12px;margin-bottom:10px">${esc(err.message||String(err))}</div>
+        <button onclick="if(confirm('Réinitialiser le catalogue mobilier local ?')){localStorage.removeItem('cdm_mob_stock');renderMobilierStock();}" style="padding:6px 12px;border-radius:6px;border:none;background:#dc2626;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">🔄 Réinitialiser le catalogue local</button>
+      </div>
     </div>`;
   }
-
-  panel.innerHTML = h;
 }
 
 
-function mobExportCSV(){
-  const stock = mobGetStock();
-  if(!stock.length){ alert('Aucun article à exporter.'); return; }
+async function mobExportCSV(){
+  const stock = await mobGetStock();
+  if(!Array.isArray(stock) || !stock.length){ alert('Aucun article à exporter.'); return; }
   const lines = ['Référence;Désignation;Stock;Note'];
-  stock.forEach(m=>lines.push([m.ref,m.nom||m.designation||'',m.qty||0,m.note||''].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')));
+  stock.forEach(m=>lines.push([m.ref,m.nom||m.designation||'',m.qty||0,m.note||''].map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(';')));
   const blob = new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='mobilier_stock.csv'; a.click();
@@ -8500,12 +8549,42 @@ async function delSave(i){
 }
 
 /* ─── MOBILIER ─── */
-async function mobGetStock(){
-  if(SB.online){
-    const rows=await SB.get('tp_mobilier','?order=nom.asc');
-    if(Array.isArray(rows)){localStorage.setItem('cdm_mob_stock',JSON.stringify(rows));return rows;}
+// Lecture locale rapide (synchrone, jamais bloque l'UI)
+function mobGetStockLocal(){
+  try{
+    const data=JSON.parse(localStorage.getItem('cdm_mob_stock')||'[]');
+    if(!Array.isArray(data))return[];
+    return data.filter(r=>r && r.ref!=null && String(r.ref).trim()!=='');
+  }catch(e){
+    console.warn('[mobGetStockLocal] corrompu, reset:',e.message);
+    localStorage.removeItem('cdm_mob_stock');
+    return[];
   }
-  try{return JSON.parse(localStorage.getItem('cdm_mob_stock')||'[]');}catch(e){return[];}
+}
+// Lecture async : retourne TOUJOURS un tableau (localStorage en premier),
+// puis tente une sync Supabase en arrière-plan avec timeout 4s,
+// et re-render si nouvelle donnée et onglet Mobilier actif.
+async function mobGetStock(){
+  const local=mobGetStockLocal();
+  if(SB && SB.online && !SB._disabled){
+    // Background sync, ne bloque jamais le render
+    Promise.race([
+      SB.get('tp_mobilier','?order=nom.asc').catch(e=>{console.warn('[mobGetStock] SB:',e.message);return null;}),
+      new Promise(r=>setTimeout(()=>r(null),4000))
+    ]).then(rows=>{
+      if(!Array.isArray(rows))return;
+      const clean=rows.filter(r=>r && r.ref!=null && String(r.ref).trim()!=='');
+      const before=localStorage.getItem('cdm_mob_stock')||'';
+      const after=JSON.stringify(clean);
+      if(before!==after){
+        localStorage.setItem('cdm_mob_stock',after);
+        if(typeof S!=='undefined' && S.profile==='mobilier' && typeof renderMobilierStock==='function'){
+          try{renderMobilierStock();}catch(e){console.warn('[mob refresh]',e);}
+        }
+      }
+    });
+  }
+  return local;
 }
 function mobSaveStock(data){localStorage.setItem('cdm_mob_stock',JSON.stringify(data));}
 
