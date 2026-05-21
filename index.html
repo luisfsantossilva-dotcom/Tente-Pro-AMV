@@ -2056,11 +2056,27 @@ function rideauxHTML(prof){
 /* ══════════════════════════════════════
    SWITCH PROFILE
 ══════════════════════════════════════ */
+// Topbar avec 3 boutons (Sauvegarder / Bon prép / +Chantier) toujours visible.
+// Sur les onglets non-calculateur, on cache uniquement les KPI (modules/m²/kg).
+function _topbarMode(showKpi){
+  const tb=document.querySelector('.topbar');
+  if(tb) tb.style.display='flex';
+  // KPI parts : visibles seulement sur les profils calculateur
+  ['topbar-cfg','topbar-pills','topbar-name','topbar-adj'].forEach(cls=>{
+    document.querySelectorAll('.'+cls).forEach(el=>el.style.display = showKpi ? '' : 'none');
+  });
+  // 3 boutons d'action TOUJOURS visibles
+  const ab=document.getElementById('cfg-actions-bar');
+  if(ab) ab.style.display='flex';
+}
 function switchProfile(prof, tabEl){
   S.profile = prof;
   S.pignonInter = 0;
   document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
   if(tabEl) tabEl.classList.add('active');
+  // Topbar mode : KPI visibles uniquement pour les profils calculateur
+  const _CALC_PROFILES=['p93','p240','p334','pontdanse','pagode','plancher'];
+  _topbarMode(_CALC_PROFILES.includes(prof));
   // Esconder chantier-view em todos os perfis excepto commande
   if(prof!=='commande'){
     const _cv0=document.getElementById('chantier-view');
@@ -2074,7 +2090,7 @@ function switchProfile(prof, tabEl){
   if(prof==='chauffage'){
     const rg=document.querySelector('.rg'); if(rg)rg.style.display='none';
     const vw=document.getElementById('viz-wrap'); if(vw)vw.style.display='none';
-    const tb=document.querySelector('.topbar'); if(tb)tb.style.display='none';
+    /* topbar gérée par _topbarMode() */
     const eb=$('err'); if(eb){eb.textContent='';eb.className='err';}
     const cp=document.getElementById('cont-right-panel'); if(cp){cp.style.display='none';cp.innerHTML='';}
     const cmdp=document.getElementById('cmd-right-panel'); if(cmdp){cmdp.style.display='none';cmdp.innerHTML='';}
@@ -2089,7 +2105,7 @@ function switchProfile(prof, tabEl){
   if(prof==='stock'){
     const rg=document.querySelector('.rg'); if(rg)rg.style.display='none';
     const vw=document.getElementById('viz-wrap'); if(vw)vw.style.display='none';
-    const tb=document.querySelector('.topbar'); if(tb)tb.style.display='none';
+    /* topbar gérée par _topbarMode() */
     const eb=$('err'); if(eb){eb.textContent='';eb.className='err';}
     const cp=document.getElementById('cont-right-panel'); if(cp){cp.style.display='none';cp.innerHTML='';}
     const cmdp=document.getElementById('cmd-right-panel'); if(cmdp){cmdp.style.display='none';cmdp.innerHTML='';}
@@ -2103,7 +2119,7 @@ function switchProfile(prof, tabEl){
     // Hide all other panels
     const rg=document.querySelector('.rg'); if(rg)rg.style.display='none';
     const vw=document.getElementById('viz-wrap'); if(vw)vw.style.display='none';
-    const tb=document.querySelector('.topbar'); if(tb)tb.style.display='none';
+    /* topbar gérée par _topbarMode() */
     const eb=$('err'); if(eb){eb.textContent='';eb.className='err';}
     ['cont-right-panel','cmd-right-panel','stock-right-panel','pagode-right-panel',
      'plancher-right-panel','chauf-right-panel'].forEach(id=>{
@@ -2181,8 +2197,8 @@ function switchProfile(prof, tabEl){
     // Esconder elementos calculador
     const rg=document.querySelector('.rg'); if(rg)rg.style.display='none';
     const vw=document.getElementById('viz-wrap'); if(vw)vw.style.display='none';
-    const tb=document.querySelector('.topbar'); if(tb)tb.style.display='none';
-    const ab=document.getElementById('cfg-actions-bar'); if(ab)ab.style.display='none';
+    /* topbar gérée par _topbarMode() */
+    /* cfg-actions-bar toujours visible */
     const eb=$('err'); if(eb){eb.textContent='';eb.className='err';}
     const cp=document.getElementById('cont-right-panel'); if(cp){cp.style.display='none';cp.innerHTML='';}
     document.querySelectorAll('.rc').forEach(e=>e.style.display='none');
@@ -2190,7 +2206,7 @@ function switchProfile(prof, tabEl){
     const phdr=document.getElementById('params-hdr');
     if(phdr) phdr.closest('.sec').style.display='none';
     // Esconder cfg-actions-bar
-    const ab0=document.getElementById('cfg-actions-bar'); if(ab0)ab0.style.display='none';
+    /* cfg-actions-bar toujours visible */
     // Mostrar chantier-view
     const cv=document.getElementById('chantier-view');
     if(cv){cv.style.display='block';setTimeout(()=>{cv.innerHTML=chantierRight();},50);}
@@ -2222,8 +2238,8 @@ function switchProfile(prof, tabEl){
     S.eauSortie = S.eauSortie||'G';
     const rg=document.querySelector('.rg'); if(rg)rg.style.display='none';
     const vw=document.getElementById('viz-wrap'); if(vw)vw.style.display='none';
-    const tb=document.querySelector('.topbar'); if(tb)tb.style.display='none';
-    const ab=document.getElementById('cfg-actions-bar'); if(ab)ab.style.display='none';
+    /* topbar gérée par _topbarMode() */
+    /* cfg-actions-bar toujours visible */
     const eb=$('err'); if(eb){eb.textContent='';eb.className='err';}
     document.querySelectorAll('.rc').forEach(e=>e.style.display='none');
     const cp=document.getElementById('cont-right-panel'); if(cp)cp.style.display='block';
@@ -2485,8 +2501,23 @@ function calcAddToCommande(){
     ch.configs.push({id:'cfg'+Date.now(),type:S.profile,label:lbl,detail:autoLbl,snap});
   }
   chSave();
-  // Sync vers Supabase (sans bloquer ; offline → reste en local)
-  if(typeof chSaveToSB==='function') chSaveToSB(ch);
+  syncStatus('💾 Local OK — sync…','#2563eb',0);
+  // Sync vers Supabase avec feedback visible
+  if(typeof chSaveToSB==='function'){
+    chSaveToSB(ch).then(res=>{
+      if(res && Array.isArray(res) && res.length>0){
+        syncStatus('✅ Sauvegardé Supabase ('+(ch.configs?.length||0)+' configs)','#16a34a',2500);
+      } else if(SB && SB.online && !SB._disabled){
+        syncStatus('⚠ Échec sync Supabase (gardé local)','#dc2626',5000);
+        console.error('[calcAddToCommande] chSaveToSB retourne:',res);
+      } else {
+        syncStatus('💾 Sauvegardé local (Supabase offline)','#d97706',2500);
+      }
+    }).catch(e=>{
+      syncStatus('⚠ Erreur sync: '+e.message,'#dc2626',5000);
+      console.error('[calcAddToCommande] chSaveToSB error:',e);
+    });
+  }
   renderChantierGlobal();
   const btn=document.getElementById('btn-add-chantier');
   if(btn){
@@ -2853,6 +2884,12 @@ function _uniTableAB(w, A, B, mode, showDispo, dateOut, dateBack){
 
 /* ── Impression calculateurs (modes A / B / AB / BON / LIV) ── */
 function bonPreparation(){
+  // Si on est sur une tab non-calculateur (Chantiers, Mobilier, Stock, Chauffage)
+  // et qu'un chantier est actif → générer le bon de prép du chantier entier
+  const _CALC=['p93','p240','p334','pontdanse','pagode','plancher','container'];
+  if(!_CALC.includes(S.profile) && typeof chGetActive==='function' && chGetActive() && typeof bonPreparationChantier==='function'){
+    return bonPreparationChantier();
+  }
   if(!LAST) autoCalc();
   if(!LAST){ alert('Calculez d\'abord une configuration.'); return; }
 
@@ -8069,15 +8106,49 @@ async function chLoadFromSB(){
   if(!SB.online) return;
   const rows=await SB.get('tp_chantiers','?order=out_date.desc&limit=200');
   if(!Array.isArray(rows)) return;
-  if(rows.length===0 && CH_DATA.length>0){
-    // SB vazio — upload inicial de todos os locais
-    syncStatus('📤 Sync initial…','#2563eb',0);
-    for(const ch of CH_DATA) await chSaveToSB(ch);
-    syncStatus('✅ '+CH_DATA.length+' chantiers synchronisés','#16a34a',2000);
-    return;
+
+  // Index Supabase par id
+  const sbMap=new Map();
+  rows.forEach(r=>sbMap.set(r.id,r));
+
+  // PUSH AVANT PULL : on protège les changements locaux non-sync.
+  // Pour chaque chantier local, on regarde s'il est dans SB.
+  //   - Pas dans SB → push (création) et garder version locale
+  //   - Dans SB MAIS local.configs.length > SB.configs.length → push (local plus récent), garder version locale
+  //   - Sinon → SB gagne (version Supabase plus récente ou identique)
+  const pushPromises=[];
+  let pushedCount=0;
+  for(const localCh of CH_DATA){
+    const sb=sbMap.get(localCh.id);
+    const localConfigs=Array.isArray(localCh.configs)?localCh.configs:[];
+    const sbConfigs=sb && Array.isArray(sb.configs)?sb.configs:[];
+    if(!sb){
+      // Local-only → push
+      pushPromises.push(chSaveToSB(localCh));
+      pushedCount++;
+      sbMap.set(localCh.id,{
+        id:localCh.id, ref:localCh.ref||'', nom:localCh.nom||'', client:localCh.client||'',
+        tel:localCh.tel||'', addr:localCh.addr||'',
+        out_date:localCh.out||null, in_date:localCh.in||null,
+        notes:localCh.notes||'', configs:localConfigs
+      });
+    } else if(localConfigs.length > sbConfigs.length){
+      // Local a plus de configs → push (local plus à jour)
+      pushPromises.push(chSaveToSB(localCh));
+      pushedCount++;
+      sbMap.set(localCh.id,{...sb, configs:localConfigs});
+    }
   }
-  // SB é a fonte de verdade — substitui local
-  CH_DATA=rows.map(r=>({
+  if(pushedCount>0){
+    syncStatus('📤 '+pushedCount+' chantier(s) local(aux) → Supabase…','#2563eb',0);
+    await Promise.all(pushPromises);
+    syncStatus('✅ '+pushedCount+' chantier(s) synchronisé(s)','#16a34a',2500);
+  } else if(rows.length===0 && CH_DATA.length===0){
+    // rien à faire
+  }
+
+  // Appliquer la vue mergée au local
+  CH_DATA=Array.from(sbMap.values()).map(r=>({
     id:r.id, ref:r.ref||'', nom:r.nom||'', client:r.client||'',
     tel:r.tel||'', addr:r.addr||'', out:r.out_date||'', in:r.in_date||'',
     notes:r.notes||'', configs:Array.isArray(r.configs)?r.configs:[]
