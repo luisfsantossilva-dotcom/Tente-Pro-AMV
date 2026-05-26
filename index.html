@@ -1666,17 +1666,18 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
   const specials = Array.isArray(specialYs) ? specialYs : [];
   const Ltot = specials.length>0 ? specials[specials.length-1].y : L;
 
-  // extras (P334): {croixToit, croixPilier, tubeH6Cnt, csCount}
-  // - croixToit: nombre TOTAL de croix sur la toiture
-  // - croixPilier: nombre TOTAL de croix sur les murs latéraux
-  // - tubeH6Cnt: flag 1=tubes H6 visibles (rendu = 2×N tubes)
-  // - csCount: nombre de câble sets — les croix sont GROUPÉES par câble set
-  //            (chaque câble set occupe 3 bays consécutifs = 15m)
+  // extras (P334): {toitParCote, pilierH6ParCote, pilierH4, tubeH6Cnt, csCount}
+  // - toitParCote: nb de X TOIT par côté de faîte (pan gauche / pan droit indépendamment)
+  // - pilierH6ParCote: en H6 seulement, nb de X bas (= nb X haut) par côté du tube 3m
+  // - pilierH4: en H4 seulement, nb de X simples par côté
+  // - tubeH6Cnt: flag 1=tubes H6 (rendu = 2×N tubes longitudinaux à 3m)
+  // - csCount: nombre de câble sets (info pour groupage si besoin)
   const ex = extras || {};
-  const nCroixToit   = Math.max(0, +ex.croixToit   || 0);
-  const nCroixPilier = Math.max(0, +ex.croixPilier || 0);
-  const nTubeH6      = Math.max(0, +ex.tubeH6Cnt   || 0);
-  const csCount      = Math.max(0, +ex.csCount     || 0);
+  const nToitParCote    = Math.max(0, +ex.toitParCote     || 0);
+  const nPilierH6ParCote = Math.max(0, +ex.pilierH6ParCote || 0);
+  const nPilierH4       = Math.max(0, +ex.pilierH4        || 0);
+  const nTubeH6         = Math.max(0, +ex.tubeH6Cnt       || 0);
+  const csCount         = Math.max(0, +ex.csCount         || 0);
 
   // barPos: array of x-positions (metres) for barres de fermeture
   const barPositions = Array.isArray(barPos) ? barPos : [];
@@ -1767,74 +1768,65 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
     }
     return out;
   };
-  // 3b ── CROIX DE TOIT — câbles diagonales sur le pan de toiture
-  // PLACEMENT : moitié des croix au début (côté pignon avant), moitié à la fin (côté pignon arrière).
-  // Si nCroixToit = 6 sur tente 6 bays → 3 premières bays + 3 dernières bays.
-  if(nCroixToit>0 && bayCount>=1){
-    const nFront = Math.ceil(nCroixToit/2);
-    const nBack  = Math.floor(nCroixToit/2);
-    const seen = new Set();
-    const positions = [];
-    for(let k=0; k<nFront; k++){
-      const j = k;
-      if(j<bayCount && !seen.has(j)){ positions.push(j); seen.add(j); }
+  // Helper : positions des câble sets le long de la longueur
+  // Règle : CS = 1 bay, suivi de 3 bays libres. Donc bays index 0, 4, 8, 12, ...
+  // À partir de csCount, on calcule combien de bays sont des câble sets.
+  const _csBayPositions = () => {
+    const out = [];
+    if(csCount<=0 || bayCount<=0) return out;
+    for(let s=0; s<csCount; s++){
+      const j = s * 4;  // CS bays: 0, 4, 8, 12, ...
+      if(j < bayCount) out.push(j);
     }
-    for(let k=0; k<nBack; k++){
-      const j = bayCount-1-k;
-      if(j>=0 && !seen.has(j)){ positions.push(j); seen.add(j); }
-    }
-    positions.forEach(j=>{
+    return out;
+  };
+
+  // 3b ── CROIX DE TOIT (P46 rouge) — fileira CONTÍNUA ao longo de TODAS as bays
+  // Pour chaque bay, 1 croix X complète (du faîte au sablière) sur les DEUX pans
+  if(nToitParCote>0 && bayCount>=1){
+    // On dessine 1 X par bay (toute la longueur de la tente)
+    for(let j=0; j<bayCount; j++){
       const y1 = j*bay, y2 = (j+1)*bay;
-      if(y2 > Ltot+0.01) return;
-      // Pan droit
-      svg += seg(p(W/2, y1, Hr), p(W,   y2, He), 1.2, C_CROIX_TOIT, '5,3');
-      svg += seg(p(W,   y1, He), p(W/2, y2, Hr), 1.2, C_CROIX_TOIT, '5,3');
-      // Pan gauche (léger)
+      if(y2 > Ltot+0.01) break;
+      // PAN DROIT (visible) : X complète du faîte (W/2,Hr) au sablière (W,He)
+      svg += seg(p(W/2, y1, Hr), p(W,   y2, He), 1.2, C_CROIX_TOIT, '4,3');
+      svg += seg(p(W,   y1, He), p(W/2, y2, Hr), 1.2, C_CROIX_TOIT, '4,3');
+      // PAN GAUCHE (partiellement caché) : X complète du faîte (W/2,Hr) au sablière (0,He)
       svg += seg(p(0,   y1, He), p(W/2, y2, Hr), 1.0, C_CROIX_TOIT, '4,4');
       svg += seg(p(W/2, y1, Hr), p(0,   y2, He), 1.0, C_CROIX_TOIT, '4,4');
-    });
+    }
   }
 
-  // 3c ── CROIX DE PILIER — câbles diagonales sur murs latéraux
-  // PLACEMENT : à chaque 3 modules (1 cruz par câble set = 15m).
-  // En H6 : croix superposées (1 bas + 1 haut du tube 3m).
-  if(nCroixPilier>0 && bayCount>=1){
-    const h6Stack = !!ex.croixPilierH6Stack;
-    // Espacement à chaque 3 modules : position bays = [0, 3, 6, 9, ...]
-    // Si on a moins de croix que de positions possibles, on les centre
-    const positions = [];
-    const _maxSlots = Math.max(1, Math.floor(bayCount/3) + (bayCount%3>=1 ? 1 : 0));
-    if(h6Stack){
-      // nCroixPilier = nb de PAIRES superposées → 1 paire par câble set
-      const nPaires = nCroixPilier;
-      for(let k=0; k<nPaires; k++){
-        const j = Math.min(bayCount-1, k*3);
-        positions.push(j);
-      }
-    } else {
-      // 1 X simple par câble set
-      for(let k=0; k<nCroixPilier; k++){
-        const j = Math.min(bayCount-1, k*3);
-        positions.push(j);
-      }
-    }
+  // 3c ── CROIX DE PILIER (P4/P6 vert) — UNIQUEMENT aux DEUX EXTRÉMITÉS de la tente
+  // 1 X de pilier dans la PREMIÈRE bay (côté pignon avant) + 1 X dans la DERNIÈRE bay (côté pignon arrière)
+  // En H6 : croix superposée (X bas 0→3m + X haut 3m→He, séparées par le tube)
+  if((nPilierH6ParCote>0 || nPilierH4>0) && bayCount>=1){
+    const isH6 = nPilierH6ParCote>0;
     const Z_MID = 3.0;
+    // Positions : seulement bay 0 (premier) et bay (bayCount-1) (dernier)
+    const positions = [];
+    if(bayCount===1){
+      positions.push(0);
+    } else {
+      positions.push(0);
+      positions.push(bayCount-1);
+    }
     positions.forEach(j=>{
       const y1 = j*bay, y2 = (j+1)*bay;
       if(y2 > Ltot+0.01) return;
-      if(h6Stack){
-        // Mur droit (x=W) : X bas (0→3) + X haut (3→He)
+      if(isH6){
+        // MUR DROIT : X bas (0→3m) + X haut (3m→He)
         svg += seg(p(W, y1, 0),     p(W, y2, Z_MID), 1.4, C_CROIX_PILIER, '5,3');
         svg += seg(p(W, y1, Z_MID), p(W, y2, 0),     1.4, C_CROIX_PILIER, '5,3');
         svg += seg(p(W, y1, Z_MID), p(W, y2, He),    1.4, C_CROIX_PILIER, '5,3');
         svg += seg(p(W, y1, He),    p(W, y2, Z_MID), 1.4, C_CROIX_PILIER, '5,3');
-        // Mur gauche (léger)
+        // MUR GAUCHE (léger)
         svg += seg(p(0, y1, 0),     p(0, y2, Z_MID), 1.0, C_CROIX_PILIER, '4,4');
         svg += seg(p(0, y1, Z_MID), p(0, y2, 0),     1.0, C_CROIX_PILIER, '4,4');
         svg += seg(p(0, y1, Z_MID), p(0, y2, He),    1.0, C_CROIX_PILIER, '4,4');
         svg += seg(p(0, y1, He),    p(0, y2, Z_MID), 1.0, C_CROIX_PILIER, '4,4');
       } else {
-        // 1 X simple de 0 → He
+        // H4 : 1 X simple 0→He
         svg += seg(p(W, y1, 0),  p(W, y2, He), 1.4, C_CROIX_PILIER, '5,3');
         svg += seg(p(W, y1, He), p(W, y2, 0),  1.4, C_CROIX_PILIER, '5,3');
         svg += seg(p(0, y1, 0),  p(0, y2, He), 1.0, C_CROIX_PILIER, '4,4');
@@ -1946,19 +1938,23 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
   svg += `<text x="8" y="15" font-size="9.5" fill="${E_DIM}" font-weight="600">Vue pignon avant — ${titleLbl}</text>`;
   svg += `<text x="8" y="27" font-size="9" fill="${E_HIDD}">${barLabel}</text>`;
 
-  // Légende dynamique (croix toit/pilier + tube H6) — coin haut droit (sous le titre)
-  // _label provient de extras et contient "X câbles toit + Y câbles pilier · cs=N"
+  // Légende dynamique
   const legend = [];
-  if(nCroixToit>0){
-    const nCab = nCroixToit*2;
-    legend.push({color:C_CROIX_TOIT, label:nCab+' câbles toit ('+nCroixToit+' X)'});
+  if(nToitParCote>0){
+    // 1 X par bay × 2 côtés
+    const nXTotal = bayCount * 2;
+    const nCab    = nXTotal * 2;
+    legend.push({color:C_CROIX_TOIT, label:nCab+' câbles P46 toit ('+bayCount+' X×2 côtés)'});
   }
-  if(nCroixPilier>0){
-    const stack = !!ex.croixPilierH6Stack;
-    const nX   = nCroixPilier*(stack?2:1);   // X visuels (paires en H6)
-    // Cabos pilier physiques : 1 par X simple, donc nCabPilier total est connu via _label parsing
-    // Plus simple : afficher "N X pilier" sans la conversion
-    legend.push({color:C_CROIX_PILIER, label:'Pilier : '+nCroixPilier+(stack?' paires (':' X (')+nX+' X)'});
+  if(nPilierH6ParCote>0){
+    // 2 extrémités, 2 X (bas+haut), 2 côtés
+    const nXTotal = 2 * 2 * 2;  // = 8 X
+    const nCab    = nXTotal * 2;
+    legend.push({color:C_CROIX_PILIER, label:nCab+' câbles P6 pilier (2 extrémités × 2 côtés × 2 X)'});
+  } else if(nPilierH4>0){
+    const nXTotal = 2 * 2;  // 2 extrémités × 2 côtés
+    const nCab    = nXTotal * 2;
+    legend.push({color:C_CROIX_PILIER, label:nCab+' câbles P4 pilier (2 extrémités × 2 côtés)'});
   }
   if(nTubeH6>0){
     const nTubesVisuels = bayCount*2;
@@ -1966,11 +1962,11 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
   }
   if(legend.length>0){
     let lx = VW - 10, ly = 18;
-    svg += `<rect x="${lx-198}" y="${ly-2}" width="196" height="${legend.length*12+8}" fill="#ffffff" fill-opacity="0.95" stroke="${E_HIDD}" stroke-width="0.5" rx="3"/>`;
+    svg += `<rect x="${lx-268}" y="${ly-2}" width="266" height="${legend.length*12+8}" fill="#ffffff" fill-opacity="0.95" stroke="${E_HIDD}" stroke-width="0.5" rx="3"/>`;
     legend.forEach((it,i)=>{
       const y = ly + 8 + i*12;
-      svg += `<line x1="${lx-193}" y1="${y-3}" x2="${lx-174}" y2="${y-3}" stroke="${it.color}" stroke-width="2" stroke-dasharray="3,2"/>`;
-      svg += `<text x="${lx-170}" y="${y}" font-size="8.5" fill="${E_DIM}" font-weight="600">${it.label}</text>`;
+      svg += `<line x1="${lx-263}" y1="${y-3}" x2="${lx-244}" y2="${y-3}" stroke="${it.color}" stroke-width="2" stroke-dasharray="3,2"/>`;
+      svg += `<text x="${lx-240}" y="${y}" font-size="8.5" fill="${E_DIM}" font-weight="600">${it.label}</text>`;
     });
   }
 
@@ -2083,45 +2079,10 @@ function updateViz(res, p, ovA){
     // ── Extras visualizer ──
     // P334 : règle dérivée du BOM réel + groupage par CÂBLE SET (15m = 3 modules)
     // P93/P240 : 2 croix par module
+    // ── Extras visualizer DESATIVADO (cabos toit/pilier/tubo H6) ──
+    // Os cabos não estão representados visualmente devido à complexidade da regra real.
+    // Para reativar, repor as regras correctas em extras (toitParCote, pilierH6ParCote, etc.)
     let extras = null;
-    if(prof==='p334'){
-      const N334 = Math.floor(L2/5);
-      const cs   = Math.max(1, Math.ceil(N334/3));
-      const isH6 = (hLabel==='H6');
-      // Câbles TOIT (P46)    = Plaque câble simple ÷ (1 H4, 2 H6)
-      // Câbles PILIER (P4/P6)= Plaque câble pilier
-      // Chaque croix X = 2 câbles diagonaux
-      const bomA = ovA || res.A || [];
-      const _sumByRe = (re) => bomA.filter(r=>r.name && re.test(r.name)).reduce((s,r)=>s+(+r.qty||0),0);
-      const nPlaqueSimple = _sumByRe(/^Plaque câble simple/i);
-      const nPlaquePilier = _sumByRe(/^Plaque câble pilier/i);
-      const nCabosToit    = isH6 ? Math.round(nPlaqueSimple/2) : nPlaqueSimple;
-      const nCabosPilier  = nPlaquePilier;
-      // Toit : 1 X = 2 câbles, distribuées moitié au début + moitié à la fin
-      const croixToit = Math.max(0, Math.round(nCabosToit/2));
-      // Pilier : RÈGLE = 1 X par câble set (1 toutes les 3 modules)
-      //   H4 : croixPilier = cs (1 X simple par cs)
-      //   H6 : croixPilier = cs (1 PAIRE superposée par cs, chaque paire = 2 X = 4 câbles)
-      const croixPilier = cs;
-      extras = {
-        croixToit:   croixToit,
-        croixPilier: croixPilier,
-        croixPilierH6Stack: isH6,                   // chaque "croixPilier" = 2 X superposées
-        tubeH6Cnt:   isH6 ? 1 : 0,
-        csCount:     cs,                            // groupage par câble set
-        _label: nCabosToit+' câbles toit + '+nCabosPilier+' câbles pilier · cs='+cs
-      };
-    } else if(prof==='p93' || prof==='p240'){
-      // 2 câbles par demi-module = 1 croix X par demi-module = 2 croix par module
-      const _Nbays = Math.round(L2/bay);
-      const nCroix = Math.max(0, 2 * _Nbays);
-      extras = {
-        croixToit:   Math.ceil(nCroix / 2),
-        croixPilier: Math.floor(nCroix / 2),
-        tubeH6Cnt:   0,
-        _label: nCroix+' croix (2/module)'
-      };
-    }
     drawTent('tent-svg-wrap',      W2, L2, bay, barPos, hLabel, specialYs, extras);
     drawTent('tent-svg-print-wrap',W2, L2, bay, barPos, hLabel, specialYs, extras);
   }
