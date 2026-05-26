@@ -2573,42 +2573,40 @@ function autoCalc(){
   if(res.B){
     const applyBaseOv=(prefix, ovVal)=>{
       if(ovVal===undefined) return;
-      // Match strict: "Rideau 5m – Couleur" (avec tiret), pas "Rideau 5m (module spécial)"
+      // Match LARGE : tout item commençant par "prefix" (variantes : "– Couleur",
+      // "(module spécial) – Couleur", "Xm (...) – Couleur", etc.)
+      // L'override base s'applique au TOTAL — toutes les variantes confondues.
       const lp=prefix.toLowerCase();
       const items=res.B.filter(r=>{
-        const ln=r.name.toLowerCase();
-        // accepter "prefix – ..." mais rejeter "prefix (module spécial)"
-        return (ln===lp || ln.startsWith(lp+' –') || ln.startsWith(lp+' -')) && !ln.includes('module spécial');
+        const ln=(r.name||'').toLowerCase();
+        // Exact OU "prefix " (espace après — sépare du reste, évite faux match
+        // ex: "Rideau 5m" ne doit pas matcher "Rideau 50cm")
+        return ln===lp || ln.startsWith(lp+' ') || ln.startsWith(lp+'(') || ln.startsWith(lp+'–') || ln.startsWith(lp+'-');
       });
       const calcTotal=items.reduce((s,r)=>s+r.qty,0);
       if(calcTotal>0 && ovVal!==calcTotal){
         const factor=ovVal/calcTotal;
-        // Scale proportionnellement chaque couleur
         let totalAfter=0;
         items.forEach(r=>{ r.qty=Math.max(0,Math.round(r.qty*factor)); totalAfter+=r.qty; });
         // Ajustement final pour matcher exactement ovVal (compense les arrondis)
         const diff=ovVal-totalAfter;
         if(diff!==0 && items.length>0){
-          // Ajouter le diff sur l'item le plus grand
           items.sort((a,b)=>b.qty-a.qty);
           items[0].qty=Math.max(0,items[0].qty+diff);
         }
-        // Retirer items à 0 (proprement)
+        // Retirer items à 0
         for(let i=res.B.length-1;i>=0;i--){
           if(items.includes(res.B[i]) && res.B[i].qty===0) res.B.splice(i,1);
         }
       } else if(calcTotal===0 && ovVal>0){
-        // no items yet — just set total as blanc
         res.B.push({name:prefix+' – Blanc',qty:ovVal,color:'blanc'});
       } else if(calcTotal>0 && ovVal===0){
-        // override = 0 → retirer tous les items de ce prefix
         for(let i=res.B.length-1;i>=0;i--){
           if(items.includes(res.B[i])) res.B.splice(i,1);
         }
       }
     };
-    // ATTENTION : les noms dans le moteur sont "Rideau 5m" (sans espace avant "m"),
-    // pas "Rideau 5 m" — d'où le bug d'avant qui doublait au lieu de remplacer.
+    // ATTENTION : noms moteur = "Rideau 5m" (sans espace avant "m").
     ['2','3','4','5'].forEach(sz=>{
       if(p['r'+sz+'_baseOv']!==undefined) applyBaseOv('Rideau '+sz+'m',p['r'+sz+'_baseOv']);
       if(p['ri'+sz+'_baseOv']!==undefined) applyBaseOv('Rideau '+sz+'m',p['ri'+sz+'_baseOv']);
