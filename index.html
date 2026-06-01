@@ -6301,15 +6301,17 @@ function bonPreparationChantier(){
   const dOut  = rawOut  ? fmtDate(rawOut)  : '—';
   const dBack = rawBack ? fmtDate(rawBack) : '—';
 
-  // Build all pieces from all tentes
-  const allPieces = {}; // {name: {qty, sec}}
-  const addPiece = (name, qty, sec) => {
-    if(!name||!qty) return;
-    if(!allPieces[name]) allPieces[name]={qty:0,sec};
-    allPieces[name].qty += qty;
-  };
+  // ── Calcul: PAR CONFIG (chaque tente = un bloc séparé) ──
+  const profLabels = {p93:'P93/50', p240:'P240', p334:'P334', pontdanse:'Pont-danse', pagode:'Pagode', plancher:'Plancher', container:'Container'};
+  // Génère les lignes (tr) pour une liste de pièces
+  const renderRows = (items, color) => items.map(r=>`
+    <tr><td>${esc(r.name)}</td><td class="qty"><input type="number" value="${r.qty}" min="0" style="width:46px;text-align:right;border:1px solid #cbd5e1;border-radius:4px;padding:1px 3px;font-size:9pt;font-weight:700;color:${color};background:#fff"/></td><td class="chk"><input type="checkbox" style="width:14px;height:14px;accent-color:${color}"/></td><td class="obs"><input type="text" placeholder="Obs." style="width:100%;border:none;border-bottom:1px solid #e2e8f0;font-size:8pt;color:#64748b;background:transparent"/></td></tr>`).join('');
 
+  // Génère un bloc complet pour une config (A — Structure + B — Textile)
+  const configBlocks = [];
+  let _cfgIdx = 0;
   tentes.forEach(t => {
+    _cfgIdx++;
     try {
       let p = {largeur:t.largeur,longueur:t.longueur,hauteur:t.hauteur,width:t.largeur,length:t.longueur,height:t.hauteur,tents:1,...(t._params||{})};
       if(t._overrides) Object.keys(t._overrides).forEach(k=>{ if(k) p[k]=t._overrides[k]; });
@@ -6321,22 +6323,45 @@ function bonPreparationChantier(){
       else if(t.profil==='pagode') res=PAGODE.build({pagodeSz:+t.largeur,pagodeNb:+(t._pagodeNb||1)});
       else if(t.profil==='plancher') res=PLANCHER.build({plancherW:+t.largeur,plancherL:+t.longueur,plancherPan:'0.85'});
       if(res && !res.error){
-        const A = res.A.map(r=>t._overrides&&t._overrides[r.name]!==undefined?{...r,qty:t._overrides[r.name]}:r);
-        A.forEach(r=>addPiece(r.name,r.qty,'A'));
-        (res.B||[]).forEach(r=>addPiece(r.name,r.qty,'B'));
-        if(t._extraA) t._extraA.forEach(r=>addPiece(r.name,r.qty,'A'));
-        if(t._extraB) t._extraB.forEach(r=>addPiece(r.name,r.qty,'B'));
+        const A = res.A.map(r=>t._overrides&&t._overrides[r.name]!==undefined?{...r,qty:t._overrides[r.name]}:r).filter(r=>r.qty>0);
+        const B = (res.B||[]).filter(r=>r.qty>0);
+        if(t._extraA) t._extraA.forEach(r=>{ if(r.name&&r.qty>0) A.push({name:r.name,qty:r.qty}); });
+        if(t._extraB) t._extraB.forEach(r=>{ if(r.name&&r.qty>0) B.push({name:r.name,qty:r.qty}); });
+
+        const profLbl = profLabels[t.profil] || t.profil;
+        const dims = (t.largeur && t.longueur) ? `${t.largeur}×${t.longueur}m` : '';
+        const hLbl = t.hauteur ? ` · ${t.hauteur}` : '';
+        const cfgTitle = `Config ${_cfgIdx} : ${profLbl} ${dims}${hLbl}`;
+
+        const aRows = renderRows(A, '#b91c1c');
+        const bRows = renderRows(B, '#0f766e');
+
+        // Bloc HTML pour cette config
+        configBlocks.push(`
+          <div class="config-block" style="margin:14px 16px;border:2px solid #1e293b;border-radius:8px;overflow:hidden;page-break-inside:avoid">
+            <div style="background:#1e293b;color:#fff;padding:8px 14px;font-weight:800;font-size:11pt;letter-spacing:.3px">
+              📋 ${esc(cfgTitle)}
+            </div>
+            ${aRows?`<div style="padding:0">
+              <div style="background:#475569;color:#fff;padding:5px 12px;font-size:8.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.4px">A — Structure</div>
+              <table style="width:100%;border-collapse:collapse;font-size:9.5pt">
+                <thead><tr style="background:#f8fafc"><th style="padding:5px 8px;font-size:8pt;font-weight:800;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;text-align:left">Pièce</th><th style="padding:5px 8px;font-size:8pt;font-weight:800;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;text-align:right;width:60px">Qté</th><th style="padding:5px 8px;font-size:8pt;font-weight:800;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;text-align:center;width:30px">✓</th><th style="padding:5px 8px;font-size:8pt;font-weight:800;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;text-align:left">Observations</th></tr></thead>
+                <tbody>${aRows}</tbody>
+              </table>
+            </div>`:''}
+            ${bRows?`<div style="padding:0;margin-top:6px">
+              <div style="background:#0f766e;color:#fff;padding:5px 12px;font-size:8.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.4px">B — Textile / Rideaux</div>
+              <table style="width:100%;border-collapse:collapse;font-size:9.5pt">
+                <thead><tr style="background:#f8fafc"><th style="padding:5px 8px;font-size:8pt;font-weight:800;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;text-align:left">Élément</th><th style="padding:5px 8px;font-size:8pt;font-weight:800;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;text-align:right;width:60px">Qté</th><th style="padding:5px 8px;font-size:8pt;font-weight:800;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;text-align:center;width:30px">✓</th><th style="padding:5px 8px;font-size:8pt;font-weight:800;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;text-align:left">Observations</th></tr></thead>
+                <tbody>${bRows}</tbody>
+              </table>
+            </div>`:''}
+          </div>`);
       }
     } catch(e){}
   });
 
-  const structRows = Object.entries(allPieces).filter(([,v])=>v.sec==='A').map(([name,v])=>`
-    <tr><td>${esc(name)}</td><td class="qty"><input type="number" value="${v.qty}" min="0" style="width:46px;text-align:right;border:1px solid #cbd5e1;border-radius:4px;padding:1px 3px;font-size:9pt;font-weight:700;color:#b91c1c;background:#fff"/></td><td class="chk"><input type="checkbox" style="width:14px;height:14px;accent-color:#b91c1c"/></td><td class="obs"><input type="text" placeholder="Obs." style="width:100%;border:none;border-bottom:1px solid #e2e8f0;font-size:8pt;color:#64748b;background:transparent"/></td></tr>`).join('');
-
-  const textileRows = Object.entries(allPieces).filter(([,v])=>v.sec==='B').map(([name,v])=>`
-    <tr><td>${esc(name)}</td><td class="qty"><input type="number" value="${v.qty}" min="0" style="width:46px;text-align:right;border:1px solid #cbd5e1;border-radius:4px;padding:1px 3px;font-size:9pt;font-weight:700;color:#b91c1c;background:#fff"/></td><td class="chk"><input type="checkbox" style="width:14px;height:14px;accent-color:#b91c1c"/></td><td class="obs"><input type="text" placeholder="Obs." style="width:100%;border:none;border-bottom:1px solid #e2e8f0;font-size:8pt;color:#64748b;background:transparent"/></td></tr>`).join('');
-
-  // Mobilier rows
+  // Mobilier rows (commun aux configs, pas par config)
   const mobRows = Object.entries(mobilier).map(([ref,qty])=>{
     const item = mobStock.find(m=>m.ref===ref)||{nom:ref};
     return `<tr><td>${esc(item.nom||ref)}</td><td class="qty"><input type="number" value="${qty}" min="0" style="width:46px;text-align:right;border:1px solid #cbd5e1;border-radius:4px;padding:1px 3px;font-size:9pt;font-weight:700;color:#1e40af;background:#fff"/></td><td class="chk"><input type="checkbox" style="width:14px;height:14px;accent-color:#1e40af"/></td><td class="obs"><input type="text" placeholder="Obs." style="width:100%;border:none;border-bottom:1px solid #e2e8f0;font-size:8pt;color:#64748b;background:transparent"/></td></tr>`;
@@ -6389,15 +6414,7 @@ function bonPreparationChantier(){
     <div class="dates">📅 Sortie: ${dOut}<br>Retour: ${dBack}</div>
   </div>
 
-  ${structRows?`<div class="sec-block">
-    <div class="sec-hdr">A — Structure (toutes tentes)</div>
-    <table><thead><tr><th>Pièce</th><th class="qty">Qté</th><th class="chk">✓</th><th>Observations</th></tr></thead>
-    <tbody>${structRows}</tbody></table></div>`:''}
-
-  ${textileRows?`<div class="sec-block">
-    <div class="sec-hdr textile">B — Textile / Rideaux</div>
-    <table><thead><tr><th>Élément</th><th class="qty">Qté</th><th class="chk">✓</th><th>Observations</th></tr></thead>
-    <tbody>${textileRows}</tbody></table></div>`:''}
+  ${configBlocks.length ? configBlocks.join('') : ''}
 
   ${mobRows?`<div class="sec-block">
     <div class="sec-hdr mob">C — Mobilier</div>
