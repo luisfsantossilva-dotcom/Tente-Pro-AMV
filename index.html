@@ -2266,15 +2266,6 @@ function paramsHTML(prof){
         <button class="tbtn \${S.hauteurPD==='H100'?'on':''}" onclick="setT('hauteurPD','H100',this)">H 1,00 m</button>
       </div></div>
     </div>
-    <div class="fr" style="margin-top:4px">
-      <div class="fg"><label>Fermettes de renfort (tous les 1m)</label><div class="trow">
-        <button class="tbtn \${S.pdRenfort==='oui'?'on':''}" onclick="setT('pdRenfort','oui',this)">✅ Avec</button>
-        <button class="tbtn \${S.pdRenfort==='non'?'on':''}" onclick="setT('pdRenfort','non',this)">❌ Sans</button>
-      </div></div>
-    </div>
-    <div class="fr">
-      <div class="fg"><label>Pignons intermédiaires</label><input id="pignonInter" type="number" value="${S.pignonInter||0}" min="0" max="10" oninput="S.pignonInter=+this.value;autoCalc()"></div>
-    </div>
     <!-- ── ESCALIERS (multi, position libre, 2m fixe) ── -->
     <div class="fr" style="margin-top:4px">
       <div class="fg" style="width:100%">
@@ -2288,7 +2279,7 @@ function paramsHTML(prof){
       </div>
     </div>
     <div class="warn-box" style="background:#f0fdf4;border-color:#86efac;color:#14532d;margin-top:6px;">
-      💡 Dimensions libres (m entiers) · Pignons intermédiaires inclus dans les matériaux
+      💡 Dimensions libres (m entiers) · Barrières et fermettes calculées automatiquement
     </div>
     ${plancherZonesHTML()}`;
   return '';
@@ -3334,12 +3325,16 @@ function bonPreparation(){
   if(!LAST){ alert('Calculez d\'abord une configuration.'); return; }
 
   const p       = params();
-  const chantier= gv('chantier')||'';
-  const client  = gv('client')||'';
-  const dateOut = gv('dateOut')||'';
-  const dateBack= gv('dateBack')||'';
-  const ref     = gv('reference')||'';
-  const addr    = gv('adresse')||'';
+  // Fallback ao draft do chantier (CRM) se inputs vazios
+  const _d      = (typeof cmdGetDraft==='function') ? cmdGetDraft() : {};
+  // Fallback ao chantier ATIVO (módulo Chantiers) se ainda vazio
+  const _ch     = (typeof chGetActive==='function') ? chGetActive() : null;
+  const chantier= gv('chantier') ||_d.chantier ||(_ch?.nom)   ||'';
+  const client  = gv('client')   ||_d.client   ||(_ch?.client)||'';
+  const dateOut = gv('dateOut')  ||_d.dateOut  ||(_ch?.out)   ||'';
+  const dateBack= gv('dateBack') ||_d.dateBack ||(_ch?.in)    ||'';
+  const ref     = gv('reference')||_d.reference||(_ch?.ref)   ||'';
+  const addr    = gv('adresse')||(document.getElementById('cmd-adresse')?.value||_d.adresse||_ch?.addr||'').trim();
   const fmtD    = v=>{ if(!v)return'—'; const x=v.split('-'); return x.length===3?x[2]+'.'+x[1]+'.'+x[0]:v; };
 
   // Data with overrides
