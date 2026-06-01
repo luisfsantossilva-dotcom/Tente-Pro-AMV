@@ -6247,7 +6247,41 @@ function prepPrintTentes(){
 
 function bonPreparationChantier(){
   const d = cmdGetDraft();
-  const tentes = d.tentes||[];
+  // ── PRIORITÉ : chantier ACTIF (configs) > draft cmdGetDraft (tentes) ──
+  const ch = (typeof chGetActive==='function') ? chGetActive() : null;
+  // Convertir les configs du chantier au format "tentes" attendu plus bas
+  let tentes = [];
+  if(ch && Array.isArray(ch.configs) && ch.configs.length){
+    ch.configs.forEach(cfg=>{
+      if(!cfg) return;
+      let sn = {};
+      try{ sn = cfg.snap ? JSON.parse(cfg.snap) : {}; }catch(e){}
+      // Extraire dimensions (sn ou parsing du label)
+      let largeur = sn.largeur || sn.width || sn.largeur334 || sn.plancherW || '';
+      let longueur= sn.longueur|| sn.length|| sn.plancherL || '';
+      // largeur334 = '20.20' etc → carte numerique
+      if(cfg.type==='p334' && sn.largeur334){
+        const wmap={'20.20':20,'24.85':25,'32':32,'40.38':40,'46':46};
+        largeur = wmap[sn.largeur334] || largeur;
+      }
+      // Fallback : parser le label "P240 — 12×20m"
+      if((!largeur||!longueur) && cfg.label){
+        const m = cfg.label.match(/(\d+(?:[.,]\d+)?)\s*[×x]\s*(\d+(?:[.,]\d+)?)/);
+        if(m){ largeur = largeur||+m[1].replace(',','.'); longueur = longueur||+m[2].replace(',','.'); }
+      }
+      const hauteur = sn.hauteur || sn.height || sn.hauteur334 || sn.hauteurPD || '';
+      tentes.push({
+        profil: cfg.type,
+        largeur, longueur, hauteur,
+        _params: sn,
+        _overrides: sn.overrides || {},
+        _extraA: [], _extraB: [],
+        _pagodeNb: sn.pagodeNb || 1
+      });
+    });
+  }
+  // Fallback aux tentes du draft (si pas de chantier actif)
+  if(!tentes.length) tentes = d.tentes||[];
   const containers = d.containers||[];
   const chauffage = d.chauffage||[];
   const mobilier = d.mobilier||{};
@@ -6259,11 +6293,11 @@ function bonPreparationChantier(){
 
   const w = window.open('','_blank','width=900,height=700');
   if(!w)return;
-  const chantier = gv('chantier')||d.chantier||'';
-  const client   = gv('client')||d.client||'';
-  const rawOut   = gv('dateOut')||d.dateOut||'';
-  const rawBack  = gv('dateBack')||d.dateBack||'';
-  const adresse  = (document.getElementById('cmd-adresse')?.value||d.adresse||'').trim();
+  const chantier = gv('chantier')||d.chantier||(ch?.nom)||'';
+  const client   = gv('client')||d.client||(ch?.client)||'';
+  const rawOut   = gv('dateOut')||d.dateOut||(ch?.out)||'';
+  const rawBack  = gv('dateBack')||d.dateBack||(ch?.in)||'';
+  const adresse  = (document.getElementById('cmd-adresse')?.value||d.adresse||(ch?.addr)||'').trim();
   const dOut  = rawOut  ? fmtDate(rawOut)  : '—';
   const dBack = rawBack ? fmtDate(rawBack) : '—';
 
