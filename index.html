@@ -283,6 +283,7 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
   <div class="prof-tabs">
     <div class="ptab" data-profile="commande" onclick="switchProfile('commande',this)">Chantiers</div>
     <div class="ptab active" data-profile="p93" onclick="switchProfile('p93',this)">P93/50</div>
+    <div class="ptab" data-profile="lp" onclick="switchProfile('lp',this)">LP</div>
     <div class="ptab" data-profile="p240" onclick="switchProfile('p240',this)">P240</div>
     <div class="ptab" data-profile="p334" onclick="switchProfile('p334',this)">P334</div>
     <div class="ptab" data-profile="pontdanse" onclick="switchProfile('pontdanse',this)">Pont-danse</div>
@@ -788,6 +789,127 @@ const P240={
 };
 
 /* ══════════════════════════════════════
+   ENGINE LP — Losberger Traditionnelle
+   • Largeur figée 10 m · pente 24° · demi-ferme 5,365 m
+   • Hauteur H3 uniquement · Été uniquement
+   • Longueur par modules de 5 m (sans reste)
+   ══════════════════════════════════════ */
+const LP={
+  // Tabela por largura (8m e 10m)
+  SZ:{
+     '8':{label: '8 m', demiFerme:4365},
+    '10':{label:'10 m', demiFerme:5365}
+  },
+  ORD:[/^Plaque de base$/i,/Piquet noir/i,/Piquet \d/i,/^Bloc béton/i,/^Sangle/i,/Goupille L/i,/Goupille Ferme/i,/Goupille Faîte/i,/Goupille de sécurité/i,/^Goupille (pied|jarret)/i,/Broche/i,/Demi-lune OF/i,/Manchon tendeur/i,/Attache barre rideau/i,/^Faîte/i,/Pannes? faîtière/i,/Pannes? sablière/i,/Pannes? interm/i,/Traverse pignon/i,/Poteau pignon/i,/^Poteau long pan/i,/Demi-lune faîtage/i,/Demi-ferme/i,/^Câble CV/i,/Barre tension/i],
+  build(p){
+    // Largeur configurable : 8 ou 10 m (default 10)
+    const wKey=String(p.lpLargeur||'10');
+    const sz=this.SZ[wKey];
+    if(!sz)return{error:'Largeur LP invalide. Valeurs autorisées: 8 ou 10 m.'};
+    const w=+wKey;
+    const L=+p.longueur||+p.length||10;
+    if(L<=0||L%5!==0)return{error:'Longueur invalide. LP: multiples de 5m uniquement (5, 10, 15, 20, 25, 30...).'};
+    const N=L/5;
+    if(N<1)return{error:'Longueur trop courte (min 5m).'};
+    const H='H3';
+    const pIn=Math.max(0,+p.pignonInter||0);
+    const fix=p.fixation||'piquets';
+    const nCV=Math.max(1,+p.lpCV||2);
+
+    const nP=N+1;          // portiques (2 pignons + N-1 interm)
+    const piT=2+pIn;       // pignons totaux
+
+    const A=new Map();
+    const add=(n,q)=>{if(!q||q<=0)return;A.set(n,(A.get(n)||0)+q);};
+
+    // ── Structure (profil 125×75) ──
+    add('Poteau long pan 125×75',           2*nP);
+    add('Poteau pignon central 125×75',     2);
+    add('Demi-ferme 125×75 ('+sz.demiFerme+' mm)', 2*nP);
+    add('Traverse pignon 125×75 (5 m)',     2*piT);
+    add('Panne sablière 125×75 (5 m)',      2*N);
+    add('Panne faîtière 125×75 (5 m)',      N);
+    add('Panne intermédiaire 60×60 (5 m)',  2*N);
+    add('Demi-lune faîtage',                nP);
+    add('Plaque de base 350×300',           2*nP + 2);
+
+    // ── Quincaillerie faîtage ──
+    add('Broche Ø12 OF110006 (faîtage)',    8*nP);
+    add('Broche Ø12 OF115001 (faîtage)',    8*nP);
+    add('Demi-lune OF110204 (faîtage)',     8*nP);
+    add('Goupille de sécurité OJ034001 (faîtage)', 16*nP);
+
+    // ── Quincaillerie jarret (4 angles par portique) ──
+    const nJarret=4*nP;
+    add('Broche OF115062 (jarret)',         nJarret);
+    add('Goupille jarret OJ034001',         nJarret);
+    add('Barre tension bâche toit MU008001',nJarret);
+    add('Manchon tendeur OH110013',         nJarret);
+
+    // ── Pied de poteau long pan ──
+    add('Broche Ø16 OF110005 (pied)',       2*nP);
+    add('Goupille pied OJ034001',           2*nP);
+    add('Attache barre rideau',             2*nP);
+
+    // ── Fixation ──
+    if(fix==='piquets'){
+      const piqSize=p.piquetSize||'50';
+      add('Piquet '+piqSize+' cm',          2*nP + 2);
+      add('Piquet noir',                    8);
+    } else {
+      add('Bloc béton 500 kg',              2*nP + 2);
+      add("Sangle d'arrimage",              2*nP + 2);
+    }
+
+    // ── Contreventement ──
+    add('Câble CV latéral Ø5 mm',           2*nCV);
+    add('Câble CV toit Ø5 mm',              2*nCV);
+
+    // ── Textile / Rideaux ──
+    const B=[];
+    const bT=N;
+    const bSp=resolveColors(bT,p.b_mode||'mixte',p.b_noir,p.b_cristal,0,0);
+    if(bSp.error)return{error:'Bâches: total couleurs ('+bSp.used+') > total ('+bSp.total+').'};
+    const bgl='Bâche toiture '+w+'m (5 m)';
+    if(bSp.blanc>0)  B.push({name:bgl+' – Blanc',qty:bSp.blanc,color:'blanc'});
+    if(bSp.noir>0)   B.push({name:bgl+' – Noir',qty:bSp.noir,color:'noir'});
+    if(bSp.cristal>0)B.push({name:bgl+' – Cristal',qty:bSp.cristal,color:'cristal'});
+
+    const r5T=2*N + 2*piT;
+    const r5Sp=resolveColors(r5T,p.r5_mode||'mixte',p.r5_noir,p.r5_cristal,p.r5_fenetre,p.r5_secours);
+    if(r5Sp.error)return{error:'Rideau 5m: total couleurs ('+r5Sp.used+') > total ('+r5Sp.total+').'};
+    const rgl='Rideau 5m';
+    if(r5Sp.blanc>0)  B.push({name:rgl+' – Blanc',qty:r5Sp.blanc,color:'blanc'});
+    if(r5Sp.noir>0)   B.push({name:rgl+' – Noir',qty:r5Sp.noir,color:'noir'});
+    if(r5Sp.cristal>0)B.push({name:rgl+' – Cristal',qty:r5Sp.cristal,color:'cristal'});
+    if(r5Sp.fenetre>0)B.push({name:rgl+' – Fenêtre',qty:r5Sp.fenetre,color:'fenetre'});
+    if(r5Sp.secours>0)B.push({name:rgl+' – Sortie de secours',qty:r5Sp.secours,color:'secours'});
+
+    const pSp=resolveColors(piT,p.p_mode||'mixte',p.p_noir,p.p_cristal,0,0);
+    if(pSp.error)return{error:'Pignons: total couleurs ('+pSp.used+') > total ('+pSp.total+').'};
+    const pgl='Pignon complet '+w+'m';
+    if(pSp.blanc>0)  B.push({name:pgl+' – Blanc',qty:pSp.blanc,color:'blanc'});
+    if(pSp.noir>0)   B.push({name:pgl+' – Noir',qty:pSp.noir,color:'noir'});
+    if(pSp.cristal>0)B.push({name:pgl+' – Cristal',qty:pSp.cristal,color:'cristal'});
+
+    A.set('Barre tension rideau 5m',r5T);
+    const oi=n=>{const i=this.ORD.findIndex(r=>r.test(n));return i<0?999:i;};
+    const Ar=[...A.entries()].map(([n,q])=>({name:n,qty:q})).sort((a,b)=>oi(a.name)-oi(b.name));
+
+    const des=p.designation||'1 tente '+w+'×'+L+' – LP – '+H+' – ÉTÉ';
+    return{
+      A:Ar, B, des,
+      surface:w*L, N, modules:N, arceauxParTente:nP,
+      badge:'LP · '+w+'×'+L+'m · '+H+' · Été',
+      optsLine:'N='+N+' | Portiques='+nP+' | Pignons='+piT+' | CV='+nCV+' trav.'+' | Fix='+fix,
+      totalWeight:Ar.reduce((s,r)=>s+wt(r.name)*r.qty,0),
+      rideauTotals:{2:0,3:0,5:r5T},
+      baches:bT, pignons:piT, remL:0
+    };
+  }
+};
+
+/* ══════════════════════════════════════
    ENGINE P334
 ══════════════════════════════════════ */
 const P334={
@@ -909,11 +1031,18 @@ const P334={
 const PDANSE={
   STAIRS:{H50:'Escalier 2 marches bois 2m',H80:'Escalier 5 marches aluminium avec garde-corps',H100:'Escalier 7 marches aluminium avec garde-corps'},
   STAIR_W:2, // largeur escalier en m (fixe)
-  bestPanels(W,L){
+  bestPanels(W,L,mainStairSide){
     const nA4=Math.floor(W/4)*L,remAw=W%4,nA2=Math.floor(remAw/2)*L,nA1=(remAw%2)*L;
     const nB4=Math.floor(L/4)*W,remBl=L%4,nB2=Math.floor(remBl/2)*W,nB1=(remBl%2)*W;
-    if(nA4>=nB4)return{dir:'W',p4:nA4,p2:nA2,p1:nA1,note:'4m sens W'};
-    else return{dir:'L',p4:nB4,p2:nB2,p1:nB1,note:'4m sens L'};
+    let useA = nA4 >= nB4;
+    // Egalité : préférer direction perpendiculaire à l'escalier principal
+    //  - F/B (escalier en façade) → panneaux 4m sens L (verticaux, perp à F/B)
+    //  - L/R                     → panneaux 4m sens W (horizontaux, perp à L/R)
+    if(nA4===nB4 && mainStairSide){
+      useA = (mainStairSide==='L' || mainStairSide==='R');
+    }
+    if(useA) return {dir:'W',p4:nA4,p2:nA2,p1:nA1,note:'4m sens W'};
+    return {dir:'L',p4:nB4,p2:nB2,p1:nB1,note:'4m sens L'};
   },
   // Décompose une longueur en segments [4,3,2,1]
   _segs(len){const out=[];let r=Math.max(0,Math.floor(len));for(const s of [4,3,2,1])while(r>=s){out.push(s);r-=s;}return out;},
@@ -997,7 +1126,6 @@ const PDANSE={
       const extra_renfort = (remL===0) ? nL*(W/2+1) : (nL+1)*(W/2+1);
       ferm1m = ferm1m + extra_renfort;
     }
-    const pan=this.bestPanels(W,L);
     const nCols=Math.floor(W/2)+1+(remW?1:0);
     const nRows=nL+1+(remL?1:0);
     const verins=nCols*nRows;const piliers=verins;
@@ -1007,7 +1135,34 @@ const PDANSE={
                    : [{side:'F',pos:0}]; // fallback : 1 escalier sur front
     const layout = this.computeLayout(stairs, W, L);
     const ptBarr = layout.totalPosts;
-    const ptFrein = 2;
+    // ── Direction des panneaux 4×1m (perp à l'escalier principal en cas d'égalité) ──
+    const mainStairSide = (stairs[0] && stairs[0].side) || 'F';
+    const pan = this.bestPanels(W, L, mainStairSide);
+    // ── Poteau frein : unions entre panneaux 4×1m sans poteau barrière + 1 par escalier ──
+    // dir='W' (panneaux sens W, 4m horizontaux) → unions verticales en y=1..L-1 sur côtés L (x=0) et R (x=W)
+    // dir='L' (panneaux sens L, 4m verticaux)   → unions horizontales en x=1..W-1 sur côtés F (y=0) et B (y=L)
+    let unionsTotal = 0, unionsCouvertes = 0;
+    const _scanSide = (sd, max) => {
+      const postesPos = new Set();
+      (layout.sideData[sd]?.runs || []).forEach(r => {
+        postesPos.add(r.start);
+        let cur = r.start;
+        (r.segs || []).forEach(s => { cur += s; postesPos.add(cur); });
+      });
+      for(let k=1; k<max; k++){
+        unionsTotal++;
+        if(postesPos.has(k)) unionsCouvertes++;
+      }
+    };
+    if(pan.dir==='W'){
+      _scanSide('L', L);
+      _scanSide('R', L);
+    } else {
+      _scanSide('F', W);
+      _scanSide('B', W);
+    }
+    const nStairsForFrein = Math.max(0, layout.totalStairs);
+    const ptFrein = Math.max(0, unionsTotal - unionsCouvertes) + nStairsForFrein;
     const _cnt=(segs,sz)=>segs.filter(s=>s===sz).length*3;
     const tbBarr4=_cnt(layout.allSegs,4);
     const tbBarr3=_cnt(layout.allSegs,3);
@@ -2038,6 +2193,9 @@ function updateViz(res, p, ovA){
     const wmap={'20.20':20,'24.85':25,'32':32,'40.38':40,'46':46};
     W2=wmap[p.largeur334||'20.20']||20; L2=+(p.longueur||15); bay=5;
     hLabel=p.hauteur334||'H4';
+  } else if(prof==='lp'){
+    W2=+(p.lpLargeur||10); L2=+(p.longueur||15); bay=5;
+    hLabel='H3';
   }
 
   // ── Positions exactes des barres de fermeture (données réelles) ──
@@ -2055,6 +2213,10 @@ function updateViz(res, p, ovA){
       32:[5,10,15,17,22,27],
       40:[5,10,15,20,25,30,35],
       46:[5,10,15,20,23,26,31,36,41]
+    },
+    lp: {
+      8:[4],  // 1 traverse au milieu (pour 8m largeur)
+      10:[5]  // 1 traverse au milieu (pour 10m largeur)
     }
   };
   const _bposTable = BARRE_POS[prof]||{};
@@ -2141,6 +2303,48 @@ function paramsHTML(prof){
       </div></div>
     </div>
     ${plancherZonesHTML()}`;
+  if(prof==='lp') return `
+    <div class="fr">
+      <div class="fg"><label>Largeur (m)</label>
+        <select id="lpLargeur" oninput="S.lpLargeur=this.value;autoCalc()" onchange="S.lpLargeur=this.value;autoCalc()">
+          <option value="8"  \${S.lpLargeur==='8'?'selected':''}>8 m</option>
+          <option value="10" \${(!S.lpLargeur||S.lpLargeur==='10')?'selected':''}>10 m</option>
+        </select>
+      </div>
+      <div class="fg"><label>Longueur (m) — modules de 5m</label>
+        <input id="longueur" type="number" value="15" step="5" min="5" placeholder="5, 10, 15, 20...">
+      </div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>Hauteur</label>
+        <select id="hauteur" disabled><option value="H3" selected>H 3 (figée)</option></select>
+      </div>
+      <div class="fg"><label>Pignons intermédiaires</label>
+        <input id="pignonInter" type="number" value="${S.pignonInter||0}" min="0" max="10" oninput="S.pignonInter=+this.value;autoCalc()">
+      </div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>Travées CV (contreventement)</label>
+        <input id="lpCV" type="number" value="${S.lpCV||2}" min="1" max="10" oninput="S.lpCV=+this.value;autoCalc()">
+      </div>
+      <div class="fg"><label>Fixation</label>
+        <select id="fixation">
+          <option value="piquets">Piquets</option>
+          <option value="blocs">Blocs béton</option>
+        </select>
+      </div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>Taille des piquets</label><div class="trow">
+        <button class="tbtn \${S.piquetSize==='35'?'on':''}" onclick="setT('piquetSize','35',this)">35 cm</button>
+        <button class="tbtn \${S.piquetSize==='50'?'on':''}" onclick="setT('piquetSize','50',this)">50 cm</button>
+        <button class="tbtn \${S.piquetSize==='80'?'on':''}" onclick="setT('piquetSize','80',this)">80 cm</button>
+        <button class="tbtn \${S.piquetSize==='120'?'on':''}" onclick="setT('piquetSize','120',this)">120 cm</button>
+      </div></div>
+    </div>
+    <div class="warn-box" style="background:#fef3c7;border-color:#fbbf24;color:#78350f;margin-top:6px;">
+      💡 Losberger Traditionnelle (LP) — Largeurs 8 ou 10 m · Pente 24° · Profil 125×75 · Été uniquement
+    </div>`;
   if(prof==='p240') return `
     <div class="fr">
       <div class="fg"><label>Largeur (m)</label>
@@ -2476,7 +2680,7 @@ function switchProfile(prof, tabEl){
   document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
   if(tabEl) tabEl.classList.add('active');
   // Topbar mode : KPI visibles uniquement pour les profils calculateur
-  const _CALC_PROFILES=['p93','p240','p334','pontdanse','pagode','plancher'];
+  const _CALC_PROFILES=['p93','lp','p240','p334','pontdanse','pagode','plancher'];
   _topbarMode(_CALC_PROFILES.includes(prof));
   // Esconder chantier-view em todos os perfis excepto commande
   if(prof!=='commande'){
@@ -2691,7 +2895,7 @@ function params(){
     hasPlancherZones:(S.plancherZones||[]).filter(z=>z.w>0&&z.l>0).length>0
   };
   ['largeur','longueur','hauteur','width','length','tents','height',
-   'pignonInter','portique3','portique6','largeur334'].forEach(id=>{
+   'pignonInter','portique3','portique6','largeur334','lpLargeur','lpCV'].forEach(id=>{
     const v=gv(id); if(v!==null&&v!=='') p[id]=v;
   });
   ['2','3','4','5'].forEach(sz=>{
@@ -2736,6 +2940,7 @@ function autoCalc(){
   let res;
   try{
     if(S.profile==='p93')     res = P93.build(p);
+    else if(S.profile==='lp') res = LP.build(p);
     else if(S.profile==='p240') res = P240.build(p);
     else if(S.profile==='p334') res = P334.build(p);
     else if(S.profile==='pontdanse') res = PDANSE.build(p);
@@ -2917,7 +3122,7 @@ function calcAddToCommande(){
     return;
   }
   const p=params();
-  const profLabels={p93:'P93/50',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode',plancher:'Plancher',container:'Container'};
+  const profLabels={p93:'P93/50',lp:'LP',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode',plancher:'Plancher',container:'Container'};
   const w=S.profile==='pagode'?S.pagodeSz:S.profile==='plancher'?S.plancherW:(p.width||p.largeur||'');
   const l=S.profile==='pagode'?S.pagodeSz:S.profile==='plancher'?S.plancherL:(p.length||p.longueur||'');
   const autoLbl=(profLabels[S.profile]||S.profile)+(w&&l?' — '+w+'×'+l+'m':'');
@@ -3317,7 +3522,7 @@ function _uniTableAB(w, A, B, mode, showDispo, dateOut, dateBack){
 function bonPreparation(){
   // Si on est sur une tab non-calculateur (Chantiers, Mobilier, Stock, Chauffage)
   // et qu'un chantier est actif → générer le bon de prép du chantier entier
-  const _CALC=['p93','p240','p334','pontdanse','pagode','plancher','container'];
+  const _CALC=['p93','lp','p240','p334','pontdanse','pagode','plancher','container'];
   if(!_CALC.includes(S.profile) && typeof chGetActive==='function' && chGetActive() && typeof bonPreparationChantier==='function'){
     return bonPreparationChantier();
   }
@@ -3348,7 +3553,7 @@ function bonPreparation(){
   const logoSrc = logoEl?.src||'';
 
   const today   = new Date().toLocaleDateString('fr-CH',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const profLbl = {p93:'P93/50',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode',plancher:'Plancher'}[S.profile]||S.profile;
+  const profLbl = {p93:'P93/50',lp:'LP',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode',plancher:'Plancher'}[S.profile]||S.profile;
 
   // SVG visualizer
   const vizEl  = document.getElementById('tent-svg-wrap');
@@ -3563,7 +3768,7 @@ function doPrint(mode){
   const B=[...(LAST.B||[]),
     ...(window.OV_EXTRA?.B||[]).filter(r=>r.name&&r.qty>0).map(r=>({...r,ov:true,extra:true}))];
   const showDispo=mode==='BON';
-  const profLabel={p93:'P93/50',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode'}[S.profile]||S.profile;
+  const profLabel={p93:'P93/50',lp:'LP',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode'}[S.profile]||S.profile;
 
   const titles={A:'Listing Structure A',B:'Listing Textile B',AB:'Listing Matériaux A+B',BON:'Bon de Préparation'};
   const w=_uniOpen(titles[mode]||'Listing');
@@ -5251,7 +5456,7 @@ const CMD_LARGEURS = {
   p334:     [20,26,31,37,43,46],
   pontdanse:[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
 };
-const CMD_LABELS = {p93:'P93/50',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode'};
+const CMD_LABELS = {p93:'P93/50',lp:'LP',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode'};
 function cmdProfileLabel(prof){ return CMD_LABELS[prof]||(prof?prof.toUpperCase():'?'); }
 
 function cmdTenteModules(profil, longueur){
@@ -5296,7 +5501,7 @@ function commandeRightTentes(){
           <div>
             <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px">Profil</label>
             <select id="cmd-t-prof" onchange="S.cmdTenteProf=this.value;renderCommande()" style="width:100%">
-              ${['p93','p240','p334','pontdanse'].map(p=>`<option value="${p}" ${prof===p?'selected':''}>${CMD_LABELS[p]}</option>`).join('')}
+              ${['p93','lp','p240','p334','pontdanse'].map(p=>`<option value="${p}" ${prof===p?'selected':''}>${CMD_LABELS[p]}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -5772,6 +5977,7 @@ function printFichePrepa(){
     try {
       let res = null;
       if(t.profil==='p93')       res=P93.build(p);
+      else if(t.profil==='lp')   res=LP.build(p);
       else if(t.profil==='p240') res=P240.build(p);
       else if(t.profil==='p334') res=P334.build(p);
       else if(t.profil==='pontdanse') res=PDANSE.build(p);
@@ -5794,7 +6000,7 @@ function printFichePrepa(){
   const w = window.open('','_blank','width=900,height=750');
   if(!w){ alert('Popup bloqué — autorisez les popups pour ce site.'); return; }
 
-  const profLabel = {p93:'P93/50',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode',plancher:'Plancher'};
+  const profLabel = {p93:'P93/50',lp:'LP',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode',plancher:'Plancher'};
 
   // Build HTML sections
   let sectionsHTML = '';
@@ -6317,6 +6523,7 @@ function bonPreparationChantier(){
       if(t._overrides) Object.keys(t._overrides).forEach(k=>{ if(k) p[k]=t._overrides[k]; });
       let res;
       if(t.profil==='p93')         res=P93.build(p);
+      else if(t.profil==='lp')     res=LP.build(p);
       else if(t.profil==='p240')   res=P240.build(p);
       else if(t.profil==='p334')   res=P334.build(p);
       else if(t.profil==='pontdanse') res=PDANSE.build(p);
@@ -6577,6 +6784,7 @@ function cmdBuildMaterials(t){
     };
     let res;
     if(t.profil==='p93')       res=P93.build(p);
+    else if(t.profil==='lp')   res=LP.build(p);
     else if(t.profil==='p240') res=P240.build(p);
     else if(t.profil==='p334') res=P334.build(p);
     else if(t.profil==='pontdanse') res=PDANSE.build(p);
@@ -6622,11 +6830,11 @@ function canonPiece(raw, profil){
   if(m=n.match(/^Pignon – H[\d,.]+ \(\d+ mm\) – (.+)$/)) return `Pignon P93/50 — ${m[1]}`;
   if(m=n.match(/^Pignon complet (\d+)m – (.+)$/)) return `Pignon P240 ${m[1]}m — ${m[2]}`;
   if(m=n.match(/^Bâche toiture (\d+(?:[.,]\d+)?)m \(\d+ mm\) – (.+)$/)){
-    const pl={p93:'P93/50',p240:'P240',p334:'P334',pontdanse:'Pont-danse'}[profil]||'';
+    const pl={p93:'P93/50',lp:'LP',p240:'P240',p334:'P334',pontdanse:'Pont-danse'}[profil]||'';
     return `Bâche ${pl} ${m[1]}m — ${m[2]}`;
   }
   if(m=n.match(/^Bâche toiture (\d+(?:[.,]\d+)?)m – (.+)$/)){
-    const pl={p93:'P93/50',p240:'P240',p334:'P334',pontdanse:'Pont-danse'}[profil]||'';
+    const pl={p93:'P93/50',lp:'LP',p240:'P240',p334:'P334',pontdanse:'Pont-danse'}[profil]||'';
     return `Bâche ${pl} ${m[1]}m — ${m[2]}`;
   }
   if(m=n.match(/^Pignon complet (.+) – (.+)$/)) return `Pignon P334 ${m[1]} — ${m[2]}`;
@@ -8949,7 +9157,7 @@ function printChantier(){
     +'</div>';
 
   // ── BONS DE PRÉPARATION par config ───────────────────────────
-  const profLabels={p93:'P93/50',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode',plancher:'Plancher',container:'Container'};
+  const profLabels={p93:'P93/50',lp:'LP',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode',plancher:'Plancher',container:'Container'};
 
   function buildBonHTML(cfg){
     if(!cfg.snap) return '';
@@ -8976,6 +9184,7 @@ function printChantier(){
     let res;
     try{
       if(sn.profile==='p93')            res=P93.build(p);
+      else if(sn.profile==='lp')        res=LP.build(p);
       else if(sn.profile==='p240')      res=P240.build(p);
       else if(sn.profile==='p334')      res=P334.build(p);
       else if(sn.profile==='pontdanse') res=PDANSE.build(p);
