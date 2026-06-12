@@ -311,7 +311,7 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
   <div class="sec" id="sec-chantier-global" style="position:relative">
     <div class="sec-hdr" onclick="togSec(this)">🗂 Chantier &amp; client</div>
     <div class="sec-body" id="chantier-global-inner"></div>
-    <div id="ch-sync-overlay" style="display:none;position:absolute;inset:0;background:rgba(15,23,42,.7);backdrop-filter:blur(2px);z-index:10;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;text-align:center">
+    <div id="ch-sync-overlay" style="position:absolute;inset:0;background:rgba(15,23,42,.7);backdrop-filter:blur(2px);z-index:10;border-radius:4px;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;text-align:center;display:none">
       <div id="ch-sync-msg" style="font-size:12px;font-weight:800;color:#fff;letter-spacing:.3px">⏳ Synchronisation en cours…</div>
       <button onclick="initSupabase()" style="padding:7px 16px;border-radius:6px;border:none;background:#b91c1c;color:#fff;font-size:11.5px;font-weight:800;font-family:var(--font);cursor:pointer">🔄 Synchroniser maintenant</button>
       <div style="font-size:10px;color:rgba(255,255,255,.5)">Les chantiers sont en lecture seule<br>jusqu'à la synchronisation</div>
@@ -2678,6 +2678,13 @@ function switchProfile(prof, tabEl){
   S.pignonInter = 0;
   document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
   if(tabEl) tabEl.classList.add('active');
+  // Ré-évaluer l'overlay de sync : visible uniquement dans le module Chantiers
+  const _ovSync=document.getElementById('ch-sync-overlay');
+  if(_ovSync){
+    const _pend=_ovSync.dataset.pending==='1';
+    const _inCh=(prof==='commande'||prof==='chantiers');
+    _ovSync.style.display=(_pend&&_inCh)?'flex':'none';
+  }
   // Topbar mode : KPI visibles uniquement pour les profils calculateur
   const _CALC_PROFILES=['p93','lp','p240','p334','pontdanse','pagode','plancher'];
   _topbarMode(_CALC_PROFILES.includes(prof));
@@ -9252,7 +9259,12 @@ function printChantier(){
 function chSyncOverlay(show,msg){
   const ov=document.getElementById('ch-sync-overlay');
   if(!ov) return;
-  ov.style.display=show?'flex':'none';
+  // L'overlay ne bloque QUE le module Chantiers ; dans les profils de calcul
+  // (Plancher, P240, LP, …) l'indicateur ☁ SB suffit et les paramètres restent accessibles.
+  const inChantiers = (typeof S!=='undefined' && (S.profile==='commande'||S.profile==='chantiers'));
+  ov.style.display = (show && inChantiers) ? 'flex' : 'none';
+  // Mémoriser l'état pour ré-afficher si l'utilisateur revient aux Chantiers
+  ov.dataset.pending = show ? '1' : '';
   if(msg){const m=document.getElementById('ch-sync-msg');if(m)m.textContent=msg;}
 }
 
