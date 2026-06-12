@@ -1817,9 +1817,13 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
   const He = H_TO_M[H_label] || H_TO_M[H_label.replace('H','')] || 3;
   const Hr = VIZ_getHr(W, He);
   const bayCount = Math.round(L / bay);
-  // specialYs: array of {y, label} for special module arceau positions
+  // specialYs: array of {y, label} for special module boundary positions
   const specials = Array.isArray(specialYs) ? specialYs : [];
-  const Ltot = specials.length>0 ? specials[specials.length-1].y : L;
+  const Ltot = L;
+  // Positions réelles des fermes intermédiaires : multiples de bay strictement < L
+  // Ex: L=12, bay=5 → fermes en y=5 et y=10 (module spécial 10→12)
+  const fermeYs = [];
+  for(let y=bay; y<L-0.01; y+=bay) fermeYs.push(y);
 
   // extras (P334): {toitParCote, pilierH6ParCote, pilierH4, tubeH6Cnt, csCount}
   // - toitParCote: nb de X TOIT par côté de faîte (pan gauche / pan droit indépendamment)
@@ -1871,8 +1875,7 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
 
   // 3 ── Internal arceau grid
   const ridgeZ = x => x<=W/2 ? He+(Hr-He)*(x/(W/2)) : He+(Hr-He)*((W-x)/(W/2));
-  for(let i=1; i<bayCount; i++){
-    const y = i*bay;
+  for(const y of fermeYs){
     svg += seg(p(W,y,0),    p(W,y,He),   1.2, E_STRUC);
     svg += seg(p(W/2,y,Hr), p(W,y,He),   1.2, E_STRUC);
     svg += seg(p(0,y,He),   p(W/2,y,Hr), 1.2, E_STRUC);
@@ -2040,14 +2043,7 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
     svg += `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="#b91c1c" stroke-width="2.5" stroke-linecap="round"/>`;
   }
 
-  // Special module arceaux (orange, dashed boundary at L if specials exist)
-  if(specials.length>0){
-    svg += seg(p(0,L,0), p(W,L,0), 1.5, '#b45309', '4,3');
-    svg += seg(p(0,L,0), p(0,L,He), 1.5, '#b45309', '4,3');
-    svg += seg(p(W,L,0), p(W,L,He), 1.5, '#b45309', '4,3');
-    svg += seg(p(0,L,He), p(W/2,L,Hr), 1.5, '#b45309', '4,3');
-    svg += seg(p(W,L,He), p(W/2,L,Hr), 1.5, '#b45309', '4,3');
-  }
+  // Special module : la frontière (ferme orange) est dessinée ci-dessous ; le pignon arrière reste noir.
   for(const sp of specials){
     const sy = sp.y;
     svg += seg(p(0,sy,0),   p(W,sy,0),    1.8, '#d97706');
@@ -2055,8 +2051,9 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
     svg += seg(p(W,sy,0),   p(W,sy,He),   1.8, '#d97706');
     svg += seg(p(0,sy,He),  p(W/2,sy,Hr), 1.8, '#d97706');
     svg += seg(p(W,sy,He),  p(W/2,sy,Hr), 1.8, '#d97706');
-    // Label
-    const lp = p(W+0.3,sy,He/2);
+    // Label au milieu du module spécial (entre sy et L)
+    const lblY = (typeof sp.mid==='number') ? sp.mid : sy;
+    const lp = p(W+0.3,lblY,He/2);
     svg += `<text x="${lp[0].toFixed(1)}" y="${lp[1].toFixed(1)}" font-size="8.5" fill="#d97706" font-weight="700">${sp.label}</text>`;
   }
 
@@ -2077,7 +2074,7 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
   const pL0=p(W,0,0), pLL=p(W,Ltot,0);
   svg += `<line x1="${(pL0[0]+lPerpX).toFixed(1)}" y1="${(pL0[1]+lPerpY).toFixed(1)}" x2="${(pLL[0]+lPerpX).toFixed(1)}" y2="${(pLL[1]+lPerpY).toFixed(1)}" stroke="${E_DIM}" stroke-width="1" stroke-linecap="round"/>`;
   const mLx=((pL0[0]+pLL[0])/2+lPerpX).toFixed(1), mLy=((pL0[1]+pLL[1])/2+lPerpY).toFixed(1);
-  const dimLbl = specials.length>0 ? L+'m + mods' : Ltot+'m';
+  const dimLbl = Ltot+'m';
   svg += `<text x="${mLx}" y="${mLy}" dy="14" text-anchor="middle" font-size="11" fill="${E_DIM}" font-weight="600" transform="rotate(${lAngle.toFixed(1)},${mLx},${mLy})">${dimLbl}</text>`;
 
   // Height (He) — left side
@@ -2089,7 +2086,7 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
   // Labels
   const barCount = barPositions.length;
   const barLabel = barCount===0 ? 'Sans barre de fermeture' : barCount+' barre'+(barCount>1?'s':'')+' / pignon';
-  const titleLbl = specials.length>0 ? `${W}m × ${L}m + mods × ${H_label}` : `${W}m × ${Ltot}m × ${H_label}`;
+  const titleLbl = `${W}m × ${Ltot}m × ${H_label}`;
   svg += `<text x="8" y="15" font-size="9.5" fill="${E_DIM}" font-weight="600">Vue pignon avant — ${titleLbl}</text>`;
   svg += `<text x="8" y="27" font-size="9" fill="${E_HIDD}">${barLabel}</text>`;
 
@@ -2228,12 +2225,13 @@ function updateViz(res, p, ovA){
 
   // Build specialYs from specialMods
   // Module spécial auto: reste de L après décomposition en N×5m
+  // Le marqueur orange est placé à la FRONTIÈRE (baseL), le label au milieu du module spécial
   const specialYs = [];
   if(prof==='p240'||prof==='p334'){
     const _baseL = Math.floor(L2/5)*5;
     const _remL  = L2 - _baseL;
-    if(_remL>0){
-      specialYs.push({y:_baseL+_remL, label:String(_remL)+' m'});
+    if(_remL>0 && _baseL>0){
+      specialYs.push({y:_baseL, label:String(_remL)+' m', mid:_baseL+_remL/2});
     }
   }
 
@@ -3531,16 +3529,16 @@ function bonPreparation(){
   if(!LAST){ alert('Calculez d\'abord une configuration.'); return; }
 
   const p       = params();
-  // Fallback ao draft do chantier (CRM) se inputs vazios
+  // PRIORITÉ : chantier ACTIF (module Chantiers) > inputs > draft CRM
+  // (les inputs gardent des valeurs résiduelles d'anciens chantiers — bug "FLEURIER")
   const _d      = (typeof cmdGetDraft==='function') ? cmdGetDraft() : {};
-  // Fallback ao chantier ATIVO (módulo Chantiers) se ainda vazio
   const _ch     = (typeof chGetActive==='function') ? chGetActive() : null;
-  const chantier= gv('chantier') ||_d.chantier ||(_ch?.nom)   ||'';
-  const client  = gv('client')   ||_d.client   ||(_ch?.client)||'';
-  const dateOut = gv('dateOut')  ||_d.dateOut  ||(_ch?.out)   ||'';
-  const dateBack= gv('dateBack') ||_d.dateBack ||(_ch?.in)    ||'';
-  const ref     = gv('reference')||_d.reference||(_ch?.ref)   ||'';
-  const addr    = gv('adresse')||(document.getElementById('cmd-adresse')?.value||_d.adresse||_ch?.addr||'').trim();
+  const chantier= (_ch?.nom)   || gv('chantier') ||_d.chantier ||'';
+  const client  = (_ch?.client)|| gv('client')   ||_d.client   ||'';
+  const dateOut = (_ch?.out)   || gv('dateOut')  ||_d.dateOut  ||'';
+  const dateBack= (_ch?.in)    || gv('dateBack') ||_d.dateBack ||'';
+  const ref     = (_ch?.ref)   || gv('reference')||_d.reference||'';
+  const addr    = (_ch?.addr   || gv('adresse')||document.getElementById('cmd-adresse')?.value||_d.adresse||'').trim();
   const fmtD    = v=>{ if(!v)return'—'; const x=v.split('-'); return x.length===3?x[2]+'.'+x[1]+'.'+x[0]:v; };
 
   // Data with overrides
@@ -6501,11 +6499,12 @@ function bonPreparationChantier(){
 
   const w = window.open('','_blank','width=900,height=700');
   if(!w)return;
-  const chantier = gv('chantier')||d.chantier||(ch?.nom)||'';
-  const client   = gv('client')||d.client||(ch?.client)||'';
-  const rawOut   = gv('dateOut')||d.dateOut||(ch?.out)||'';
-  const rawBack  = gv('dateBack')||d.dateBack||(ch?.in)||'';
-  const adresse  = (document.getElementById('cmd-adresse')?.value||d.adresse||(ch?.addr)||'').trim();
+  // PRIORITÉ : chantier ACTIF > inputs (valeurs résiduelles) > draft
+  const chantier = (ch?.nom)   || gv('chantier')||d.chantier||'';
+  const client   = (ch?.client)|| gv('client')||d.client||'';
+  const rawOut   = (ch?.out)   || gv('dateOut')||d.dateOut||'';
+  const rawBack  = (ch?.in)    || gv('dateBack')||d.dateBack||'';
+  const adresse  = (ch?.addr   || document.getElementById('cmd-adresse')?.value||d.adresse||'').trim();
   const dOut  = rawOut  ? fmtDate(rawOut)  : '—';
   const dBack = rawBack ? fmtDate(rawBack) : '—';
 
