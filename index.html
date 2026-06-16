@@ -2088,8 +2088,7 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
   const barCount = barPositions.length;
   const barLabel = barCount===0 ? 'Sans barre de fermeture' : barCount+' barre'+(barCount>1?'s':'')+' / pignon';
   const titleLbl = `${W}m × ${Ltot}m × ${H_label}`;
-  svg += `<text x="8" y="15" font-size="9.5" fill="${E_DIM}" font-weight="600">Vue pignon avant — ${titleLbl}</text>`;
-  svg += `<text x="8" y="27" font-size="9" fill="${E_HIDD}">${barLabel}</text>`;
+  // Textes informatifs supprimés (redondants avec la désignation)
 
   // Légende dynamique
   const legend = [];
@@ -3567,15 +3566,15 @@ function bonPreparation(){
   const p       = params();
   // PRIORITÉ : chantier ACTIF (module Chantiers) > inputs > draft CRM
   // (les inputs gardent des valeurs résiduelles d'anciens chantiers — bug "FLEURIER")
-  const _d      = (typeof cmdGetDraft==='function') ? cmdGetDraft() : {};
   const _ch     = (typeof chGetActive==='function') ? chGetActive() : null;
-  // Si chantier actif: utiliser UNIQUEMENT ses données (éviter les valeurs résiduelles des inputs)
-  const chantier= _ch ? (_ch.nom   ||'') : (gv('chantier') ||_d.chantier ||'');
-  const client  = _ch ? (_ch.client||'') : (gv('client')   ||_d.client   ||'');
-  const dateOut = _ch ? (_ch.out   ||'') : (gv('dateOut')  ||_d.dateOut  ||'');
-  const dateBack= _ch ? (_ch.in    ||'') : (gv('dateBack') ||_d.dateBack ||'');
-  const ref     = _ch ? (_ch.ref   ||'') : (gv('reference')||_d.reference||'');
-  const addr    = (_ch ? (_ch.addr ||'') : (gv('adresse')||document.getElementById('cmd-adresse')?.value||_d.adresse||'')).trim();
+  // Chantier actif → ses données exclusivement
+  // Pas de chantier actif → champs vides (pas de gv() ni de draft pour éviter données fantômes)
+  const chantier= _ch ? (_ch.nom   ||'') : '';
+  const client  = _ch ? (_ch.client||'') : '';
+  const dateOut = _ch ? (_ch.out   ||'') : '';
+  const dateBack= _ch ? (_ch.in    ||'') : '';
+  const ref     = _ch ? (_ch.ref   ||'') : '';
+  const addr    = (_ch ? (_ch.addr ||'') : '').trim();
   const fmtD    = v=>{ if(!v)return'—'; const x=v.split('-'); return x.length===3?x[2]+'.'+x[1]+'.'+x[0]:v; };
 
   // Data with overrides
@@ -3654,9 +3653,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;font-size:9.5pt;color:#1e293b;paddi
 .viz-wrap{margin-bottom:8px;border:1px solid #e2e8f0;border-radius:5px;overflow:hidden;background:#f8fafc;padding:4px}
 .viz-wrap svg{max-width:100%;height:auto;display:block;margin:auto}
 /* ── DESIGNATION ── */
-.desig-ref{background:#1e40af;color:#fff;border-radius:5px 5px 0 0;padding:4px 10px;font-size:9pt;font-weight:800;letter-spacing:.3px;margin-bottom:0}
-.desig-cfg{background:#2563eb;color:#fff;border-radius:0 0 5px 5px;padding:4px 10px;font-size:9.5pt;font-weight:700;margin-bottom:6px}
-.desig-cfg-only{background:#1e40af;color:#fff;border-radius:5px;padding:4px 10px;font-size:9.5pt;font-weight:700;margin-bottom:6px}
+.desig-ref{background:#1e293b;color:#fff;border-radius:5px 5px 0 0;padding:3px 10px;font-size:8.5pt;font-weight:800;letter-spacing:.3px;margin-bottom:0}
+.desig-cfg{background:#334155;color:#fff;border-radius:0 0 5px 5px;padding:5px 10px;font-size:9.5pt;font-weight:700;margin-bottom:6px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.desig-cfg-only{background:#1e293b;color:#fff;border-radius:5px;padding:5px 10px;font-size:9.5pt;font-weight:700;margin-bottom:6px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.dpill{background:rgba(255,255,255,.18);border-radius:12px;padding:2px 9px;font-size:8.5pt;font-weight:700;white-space:nowrap}
 /* ── TABLES ── */
 .sec-block{margin-bottom:8px}
 .sec-hdr{font-size:8.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:#475569;color:#fff;padding:3px 8px;border-radius:4px 4px 0 0}
@@ -3716,12 +3716,15 @@ tr:hover{background:#fafafa}
 <!-- DESIGNATION -->
 ${(()=>{
   const cfgRef = S._cfgRef && S._cfgRef.trim() ? S._cfgRef.trim() : '';
-  const desText = esc((LAST.des||'').replace(' \u2014 '+cfgRef,'').replace('\u2014 '+cfgRef,'').trim());
-  const cfgLine = desText + (LAST.surface?' · '+LAST.surface+' m²':'');
+  const rawDes = (LAST.des||'').replace(' \u2014 '+cfgRef,'').replace('\u2014 '+cfgRef,'').trim();
+  // Construire les pills en parsant rawDes (séparateurs – et ·)
+  const parts = rawDes.split(/\s*[\u2013\xb7]\s*/).map(function(p){return p.trim();}).filter(Boolean);
+  if(LAST.surface && !parts.some(function(p){return p.includes('m\xb2');})) parts.push(LAST.surface+' m\xb2');
+  const pillsHTML = parts.map(function(p){return '<span class="dpill">'+esc(p)+'</span>';}).join('');
   if(cfgRef){
-    return '<div class="desig-ref">📋 '+esc(cfgRef)+'</div><div class="desig-cfg">'+cfgLine+'</div>';
+    return '<div class="desig-ref">\uD83D\uDCCB '+esc(cfgRef)+'</div><div class="desig-cfg">'+pillsHTML+'</div>';
   } else {
-    return '<div class="desig-cfg-only">'+cfgLine+'</div>';
+    return '<div class="desig-cfg-only">'+pillsHTML+'</div>';
   }
 })()}
 
