@@ -3626,9 +3626,11 @@ function bonPreparation(){
   w.document.write(`<!DOCTYPE html><html lang="fr"><head>
 <meta charset="UTF-8">
 <title>Bon de Préparation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',Arial,sans-serif;font-size:9pt;color:#1e293b;padding:8mm 12mm}
+body{font-family:'Nunito','Segoe UI',Arial,sans-serif;font-size:9.5pt;color:#1e293b;padding:8mm 12mm}
 /* ── PRINT ── */
 @media print{
   .no-print{display:none!important}
@@ -3662,8 +3664,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;font-size:9pt;color:#1e293b;padding
 .sec-hdr{font-size:8.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:#475569;color:#fff;padding:3px 8px;border-radius:4px 4px 0 0}
 .sec-hdr.textile{background:#92400e}
 .sec-hdr.plancher{background:#166534}
-table{width:100%;border-collapse:collapse;font-size:9pt;table-layout:auto}
-thead th{background:#f1f5f9;font-weight:700;font-size:8pt;text-transform:uppercase;letter-spacing:.3px;padding:3px 6px;border-bottom:1.5px solid #cbd5e1;text-align:left}
+table{width:100%;border-collapse:collapse;font-size:9.5pt;table-layout:auto}
+thead th{background:#f1f5f9;font-weight:800;font-size:8pt;text-transform:uppercase;letter-spacing:.3px;padding:3px 6px;border-bottom:1.5px solid #cbd5e1;text-align:left}
 /* table: col nom colle au contenu, cols fixes à droite */
 table{table-layout:auto}
 col.c-nom{width:1%}
@@ -3678,7 +3680,7 @@ th.chk,td.chk{text-align:center;width:30px;color:#94a3b8;font-size:11pt;padding:
 th.obs,td.obs{font-size:8.5pt;color:#64748b;padding-left:6px}
 td.obs input{width:100%;min-width:80px}
 @media print{.no-print{display:none!important}.btn-bar{display:none!important}}
-td{padding:1.5px 5px;border-bottom:1px solid #f1f5f9;vertical-align:middle;line-height:1.25}
+td{padding:1px 5px;border-bottom:1px solid #f1f5f9;vertical-align:middle;line-height:1.2}
 tr:last-child td{border-bottom:none}
 tbody tr:nth-child(even){background:#f8fafc}
 tbody tr:nth-child(odd){background:#fff}
