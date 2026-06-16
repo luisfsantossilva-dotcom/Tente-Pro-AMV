@@ -2253,7 +2253,14 @@ function updateViz(res, p, ovA){
    PARAMS HTML PAR PROFIL
 ══════════════════════════════════════ */
 function paramsHTML(prof){
-  if(prof==='p93') return `
+  const refField = `
+    <div class="f1" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+      <label>Référence</label>
+      <input id="cfg-ref" type="text" placeholder="ex: Cantina, Scène, Bar, Podium…"
+        oninput="S._cfgRef=this.value;autoCalc()"
+        value="${S._cfgRef||''}">
+    </div>`;
+  if(prof==='p93') return refField + `
     <div class="fr">
       <div class="fg"><label>Largeur (m)</label>
         <select id="largeur">${[2,3,4,5,6,7,8,9,10,12].map(v=>'<option'+(v===10?' selected':'')+'>'+v+'</option>').join('')}</select>
@@ -2301,7 +2308,7 @@ function paramsHTML(prof){
       </div></div>
     </div>
     ${plancherZonesHTML()}`;
-  if(prof==='lp') return `
+  if(prof==='lp') return refField + `
     <div class="fr">
       <div class="fg"><label>Largeur (m)</label>
         <select id="lpLargeur" oninput="S.lpLargeur=this.value;autoCalc()" onchange="S.lpLargeur=this.value;autoCalc()">
@@ -2343,7 +2350,7 @@ function paramsHTML(prof){
     <div class="warn-box" style="background:#fef3c7;border-color:#fbbf24;color:#78350f;margin-top:6px;">
       💡 Losberger Traditionnelle (LP) — Largeurs 8 ou 10 m · Pente 24° · Profil 125×75 · Été uniquement
     </div>`;
-  if(prof==='p240') return `
+  if(prof==='p240') return refField + `
     <div class="fr">
       <div class="fg"><label>Largeur (m)</label>
         <select id="width">${[10,12,15,16,20,25].map(v=>'<option'+(v===20?' selected':'')+'>'+v+'</option>').join('')}</select>
@@ -2388,7 +2395,7 @@ function paramsHTML(prof){
       </div></div>
     </div>
     ${plancherZonesHTML()}`;
-  if(prof==='p334') return `
+  if(prof==='p334') return refField + `
     <div class="fr">
       <div class="fg"><label>Largeur de la tente</label>
         <select id="largeur334">
@@ -2452,7 +2459,7 @@ function paramsHTML(prof){
       </div>
     </div>
     <div id="cont-params-inner"></div>`;
-  if(prof==='pontdanse') return `
+  if(prof==='pontdanse') return refField + `
     <div class="fr">
       <div class="fg"><label>Largeur (m) — libre</label>
         <input id="largeur" type="number" value="6" min="1" step="1" style="width:100%">
@@ -2676,6 +2683,7 @@ function _topbarMode(showKpi){
 function switchProfile(prof, tabEl){
   S.profile = prof;
   S.pignonInter = 0;
+  S._cfgRef = '';
   document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
   if(tabEl) tabEl.classList.add('active');
   // Ré-évaluer l'overlay de sync : visible uniquement dans le module Chantiers
@@ -3002,6 +3010,8 @@ function autoCalc(){
     if(p.p_baseOv!==undefined) applyBaseOv('Pignon',p.p_baseOv);
     if(p.b_baseOv!==undefined) applyBaseOv('Bâche',p.b_baseOv);
   }
+  // Appliquer la référence à la désignation
+  if(S._cfgRef && S._cfgRef.trim()) res.des = res.des + ' — ' + S._cfgRef.trim();
   LAST = res;
 
   // Apply overrides
