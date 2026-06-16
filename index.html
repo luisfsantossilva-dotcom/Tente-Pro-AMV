@@ -3664,18 +3664,19 @@ body{font-family:'Segoe UI',Arial,sans-serif;font-size:9.5pt;color:#1e293b;paddi
 .sec-hdr.plancher{background:#166534}
 table{width:100%;border-collapse:collapse;font-size:9pt;table-layout:auto}
 thead th{background:#f1f5f9;font-weight:700;font-size:8pt;text-transform:uppercase;letter-spacing:.3px;padding:3px 6px;border-bottom:1.5px solid #cbd5e1;text-align:left}
-/* col nom: serre au contenu + 3cm de marge */
-td.nom{white-space:nowrap;padding-right:24px}
-th.nom{white-space:nowrap;padding-right:24px}
-/* qty: centré, largeur fixe */
-th.qty{text-align:center;width:42px;font-weight:700;color:#b91c1c}
-td.qty{text-align:center;width:42px;font-weight:700;color:#b91c1c}
-td.qty input{text-align:center}
-/* chk: centré */
-th.chk,td.chk{text-align:center;width:32px;color:#94a3b8;font-size:11pt}
-/* obs: prend tout le reste */
-th.obs,td.obs{font-size:8.5pt;color:#64748b;width:auto}
-td.obs input{width:100%}
+/* table: col nom colle au contenu, cols fixes à droite */
+table{table-layout:auto}
+col.c-nom{width:1%}
+col.c-qty{width:46px}
+col.c-chk{width:30px}
+col.c-obs{width:auto}
+td.nom,th.nom{white-space:nowrap;padding-right:6px}
+th.qty{text-align:center;width:46px;font-weight:700;color:#b91c1c;padding:3px 4px}
+td.qty{text-align:center;width:46px;font-weight:700;color:#b91c1c;padding:2px 4px}
+td.qty input{text-align:center;width:36px;display:block;margin:0 auto}
+th.chk,td.chk{text-align:center;width:30px;color:#94a3b8;font-size:11pt;padding:2px 3px}
+th.obs,td.obs{font-size:8.5pt;color:#64748b;padding-left:6px}
+td.obs input{width:100%;min-width:80px}
 @media print{.no-print{display:none!important}.btn-bar{display:none!important}}
 td{padding:2.5px 6px;border-bottom:1px solid #f1f5f9;vertical-align:middle;line-height:1.3}
 tr:last-child td{border-bottom:none}
@@ -3745,14 +3746,14 @@ ${vizHTML?`<div class="viz-wrap">${vizHTML}</div>`:''}
 <!-- A — STRUCTURE -->
 ${structRows?`<div class="sec-block">
   <div class="sec-hdr">A — Structure</div>
-  <table><thead><tr><th class="nom">Pièce</th><th class="qty">Qté</th><th class="chk">✓</th><th class="obs">Observations</th></tr></thead>
+  <table><colgroup><col class="c-nom"><col class="c-qty"><col class="c-chk"><col class="c-obs"></colgroup><thead><tr><th class="nom">Pièce</th><th class="qty">Qté</th><th class="chk">✓</th><th class="obs">Observations</th></tr></thead>
   <tbody>${structRows}</tbody></table>
 </div>`:''}
 
 <!-- B — TEXTILE -->
 ${textileRows?`<div class="sec-block">
   <div class="sec-hdr textile">B — Textile</div>
-  <table><thead><tr><th class="nom">Élément</th><th class="qty">Qté</th><th class="chk">✓</th><th class="obs">Observations</th></tr></thead>
+  <table><colgroup><col class="c-nom"><col class="c-qty"><col class="c-chk"><col class="c-obs"></colgroup><thead><tr><th class="nom">Élément</th><th class="qty">Qté</th><th class="chk">✓</th><th class="obs">Observations</th></tr></thead>
   <tbody>${textileRows}</tbody></table>
 </div>`:''}
 
