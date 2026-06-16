@@ -3592,7 +3592,12 @@ function bonPreparation(){
 
   // SVG visualizer
   const vizEl  = document.getElementById('tent-svg-wrap');
-  const vizHTML= (vizEl&&vizEl.innerHTML&&vizEl.innerHTML.trim()) ? vizEl.innerHTML : '';
+  let vizHTML = (vizEl&&vizEl.innerHTML&&vizEl.innerHTML.trim()) ? vizEl.innerHTML : '';
+  // Corriger le SVG pour l'impression: remplacer height fixe par viewBox proportionnel
+  if(vizHTML) {
+    vizHTML = vizHTML.replace(/(<svg[^>]*?)\s+height="[^"]*"/i, '$1');
+    vizHTML = vizHTML.replace(/(<svg[^>]*?)(\s+viewBox="[^"]*")/, '$1 height="auto"$2');
+  }
 
   // Build table rows
   let _rowIdx=0;
@@ -3652,8 +3657,8 @@ body{font-family:'Nunito','Segoe UI',Arial,sans-serif;font-size:9.5pt;color:#1e2
 .meta-lbl{font-size:7pt;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8}
 .meta-val{font-size:9pt;font-weight:700;color:#1e293b}
 /* ── VIZ ── */
-.viz-wrap{margin-bottom:5px;border:1px solid #e2e8f0;border-radius:5px;overflow:hidden;background:#f8fafc;padding:2px;max-height:130px}
-.viz-wrap svg{max-width:100%;height:130px;display:block;margin:auto}
+.viz-wrap{margin-bottom:5px;border:1px solid #e2e8f0;border-radius:5px;overflow:hidden;background:#f8fafc;padding:2px}
+.viz-wrap svg{width:100%;height:auto;display:block;max-height:140px}
 /* ── DESIGNATION ── */
 .desig-ref{background:#1e293b;color:#fff;border-radius:4px 4px 0 0;padding:2px 8px;font-size:8pt;font-weight:800;letter-spacing:.3px;margin-bottom:0}
 .desig-cfg{background:#334155;color:#fff;border-radius:0 0 4px 4px;padding:3px 8px;font-size:9pt;font-weight:700;margin-bottom:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
