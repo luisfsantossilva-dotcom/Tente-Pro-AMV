@@ -3031,6 +3031,13 @@ function autoCalc(){
   // Appliquer la référence à la désignation
   if(S._cfgRef && S._cfgRef.trim()) res.des = res.des + ' — ' + S._cfgRef.trim();
   LAST = res;
+  // Réinitialiser le bouton "Ajouter au chantier" à chaque nouveau calcul
+  const _btnAdd = document.getElementById('btn-add-chantier');
+  if(_btnAdd && _btnAdd.textContent !== '➕ Chantier'){
+    _btnAdd.textContent = '➕ Chantier';
+    _btnAdd.style.background = '#16a34a';
+    _btnAdd.title = 'Ajouter au chantier';
+  }
 
   // Apply overrides
   const A = res.A.map(r=>OV[r.name]!==undefined?{...r,qty:OV[r.name],ov:true}:r);
@@ -3360,6 +3367,7 @@ function getSnap(){
   const p=params();
   return {...p,profile:S.profile,season:S.season,sablieres:S.sablieres,
     heavyFloor:S.heavyFloor,lumiere:S.lumiere,pignonInter:S.pignonInter||0,
+    _cfgRef:S._cfgRef||'',
     chantier:gv('chantier'),client:gv('client'),
     dateOut:gv('dateOut'),dateBack:gv('dateBack'),
     overrides:{...OV},
