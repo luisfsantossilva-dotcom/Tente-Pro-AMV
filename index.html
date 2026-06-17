@@ -8929,6 +8929,8 @@ function chOpenConfig(cfg){
     const sv=(id,v)=>{const e=$(id);if(e&&v!=null&&v!=='')e.value=v;};
     ['largeur','longueur','hauteur','width','length','tents','height',
      'pignonInter','portique3','portique6','fixation','largeur334','lpLargeur','lpCV'].forEach(id=>sv(id,sn[id]));
+    // Restaurar referência no campo DOM
+    if(sn._cfgRef){ S._cfgRef=sn._cfgRef; sv('cfg-ref',sn._cfgRef); }
     if(sn.lpLargeur) S.lpLargeur=sn.lpLargeur;
     if(sn.lpCV!=null) S.lpCV=+sn.lpCV;
     if(sn.hauteur334)S.hauteur334=sn.hauteur334;
