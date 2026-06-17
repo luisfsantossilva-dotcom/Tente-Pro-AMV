@@ -700,28 +700,28 @@ const P240={
     const pIn=+p.pignonInter||0;
     const aT=(N+1)*tn,piT=(2+pIn)*tn;const pt=this.pt(H);
     const gFb=4*aT,gFi=4*aT,fai=aT,pil=2*aT,fer=2*aT;
-    // bf4/bf5 are TOTAL for 2 pignons per tente; extra pignons add proportionally
-    const bf4=Math.round(f.bf4*tn*(2+pIn)/2),bf5=Math.round(f.bf5*tn*(2+pIn)/2),bfT=bf4+bf5;
+    // bf4/bf5: valeurs PAR pignon dans FX, multiplier par nombre total de pignons
+    const _pignF=(2+pIn)*tn;
+    const bf4=Math.round(f.bf4*_pignF),bf5=Math.round(f.bf5*_pignF),bfT=bf4+bf5;
     const ppL=(sab==='oui')?0:pil,ppG=bfT,tpL=ppL+ppG;
     const piq50=(hf==='oui')?0:(4*tpL),piqN=(hf==='oui')?0:(8*tn); // fixe: 8 piquets noirs
     const gL=(sab==='oui')?(pil+bfT):tpL;
     const pm=this.PM[w];
     const tL=((sea==='hiver')?pm.th:pm.te)*N*tn;const t6=((sea==='hiver')?pm.s6h:pm.s6e)*N*tn;
     const t12=pm.t12*N*tn;const bol=((sea==='hiver')?pm.bh:pm.be)*N*tn;
-    // Rideaux: scale pignon contribution by (2+pIn)/2
-    const _rpF=(2+pIn)/2; // rideau pignon factor
-    const r5T=Math.round(((f.r5-2)*_rpF+2*N)*tn);
-    const r2T=Math.round(f.r2p*tn*_rpF);
-    const r3T=Math.round(f.r3p*tn*_rpF);
+    // Rideaux: valeurs PAR pignon dans FX
+    const _rpF=(2+pIn)*tn; // rideau pignon factor (par pignon × nb pignons)
+    const r5T=Math.round(f.r5*_rpF + 2*N*tn); // r5 latéraux (2 par module) + pignons
+    const r2T=Math.round(f.r2p*_rpF);
+    const r3T=Math.round(f.r3p*_rpF);
     const bT=N*tn;
-    const ten5=Math.round(((f.t5-2)*_rpF+2*N)*tn);
-    const ten2=Math.round(f.t2p*tn*_rpF);
-    const ten3=Math.round(f.t3p*tn*_rpF);
-    const _pF=(2+pIn)/2; // pignon factor — must be defined before use
-    // ptT: base ptb covers 2 pignons + 2 per additional module
-    // Per extra pignon intermédiaire: ptb/2 additional (1 plaque de base)
-    const ptT=Math.round((f.ptb+2*(N-1))*tn + (f.ptb/2)*pIn*tn);
-    const t12p=Math.round(f.tp12p*tn*_pF);const t12s=Math.round(f.tp12s*tn*_pF);
+    const ten5=Math.round(f.t5*_rpF + 2*N*tn);
+    const ten2=Math.round(f.t2p*_rpF);
+    const ten3=Math.round(f.t3p*_rpF);
+    const _pF=(2+pIn)*tn; // pignon factor
+    // ptT: ptb par pignon × nb pignons + 2 par module supplémentaire
+    const ptT=Math.round(f.ptb*(2+pIn)*tn + 2*(N-1)*tn);
+    const t12p=Math.round(f.tp12p*_pF);const t12s=Math.round(f.tp12s*_pF);
     const cm=this.mcab(N);const pcP=this.CA.pcp*cm*tn,pcF=this.CA.pcf*cm*tn;
     const cP=this.CA.cp*cm*tn,cT=this.CA.ct*cm*tn;
     const sabD=(sab==='oui')?(2*tn):0,sabS=(sab==='oui')?(2*(N-1)*tn):0;const gFS=(sab==='oui')?((sabD+sabS)/2):0;
