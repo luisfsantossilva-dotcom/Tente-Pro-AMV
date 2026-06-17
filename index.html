@@ -823,47 +823,41 @@ const LP={
     const add=(n,q)=>{if(!q||q<=0)return;A.set(n,(A.get(n)||0)+q);};
 
     // ── Structure (profil 125×75) ──
-    add('Poteau long pan 125×75',           2*nP);
-    add('Poteau pignon central 125×75',     2);
-    add('Demi-ferme 125×75 ('+sz.demiFerme+' mm)', 2*nP);
-    add('Traverse pignon 125×75 (5 m)',     2*piT);
-    add('Panne sablière 125×75 (5 m)',      2*N);
-    add('Panne faîtière 125×75 (5 m)',      N);
-    add('Panne intermédiaire 60×60 (5 m)',  2*N);
-    add('Demi-lune faîtage',                nP);
-    add('Plaque de base 350×300',           2*nP + 2);
+    add('Poteau long pan 125×75',                      2*nP);
+    add('Poteau pignon central 125×75',                2);
+    add('Demi-ferme 125×75 ('+sz.demiFerme+' mm)',     2*nP);
+    add('Traverse pignon 125×75 (5 m)',                2*piT);
+    add('Panne sablière 125×75 (5 m)',                 2*N);
+    add('Panne faîtière 125×75 (5 m)',                 N);
+    add('Panne intermédiaire 60×60 (5 m)',             2*N);
+    add('Demi-lune faîtage',                           nP);
+    add('Plaque de base 350×300',                      2*nP+2);
 
     // ── Quincaillerie faîtage ──
-    add('Broche Ø12 OF110006 (faîtage)',    8*nP);
-    add('Broche Ø12 OF115001 (faîtage)',    8*nP);
-    add('Demi-lune OF110204 (faîtage)',     8*nP);
-    add('Goupille de sécurité OJ034001 (faîtage)', 16*nP);
+    add('Goupille Ø12 (faîtage) avec clavette',        8*nP);
 
     // ── Quincaillerie jarret (4 angles par portique) ──
-    const nJarret=4*nP;
-    add('Broche OF115062 (jarret)',         nJarret);
-    add('Goupille jarret OJ034001',         nJarret);
-    add('Barre tension bâche toit MU008001',nJarret);
-    add('Manchon tendeur OH110013',         nJarret);
+    add('Goupille pilier (jarret)',                     4*nP);
+    add('Clavette jarret',                              4*nP);
+    add('Barre tension bâche toit petit',               2*nP+2);
+    add('Manchon tendeur',                              4);
 
     // ── Pied de poteau long pan ──
-    add('Broche Ø16 OF110005 (pied)',       2*nP);
-    add('Goupille pied OJ034001',           2*nP);
-    add('Attache barre rideau',             2*nP);
+    add('Goupille Ø16 (pilier) avec pilier',            4*nP);
+    add('Attache barre rideau',                         2*nP+4);
 
     // ── Fixation ──
     if(fix==='piquets'){
       const piqSize=p.piquetSize||'50';
-      add('Piquet '+piqSize+' cm',          2*nP + 2);
-      add('Piquet noir',                    8);
+      add('Piquet '+piqSize+' cm',                     8*nP+8);
     } else {
-      add('Bloc béton 500 kg',              2*nP + 2);
-      add("Sangle d'arrimage",              2*nP + 2);
+      add('Bloc béton 500 kg',                         2*nP+2);
+      add("Sangle d'arrimage",                         2*nP+2);
     }
 
     // ── Contreventement ──
-    add('Câble CV latéral Ø5 mm',           2*nCV);
-    add('Câble CV toit Ø5 mm',              2*nCV);
+    add('Câble CV Piliers Ø5 mm',                      2*nCV);
+    add('Câble CV toit Ø5 mm',                         2*nCV);
 
     // ── Textile / Rideaux ──
     const B=[];
@@ -875,7 +869,7 @@ const LP={
     if(bSp.noir>0)   B.push({name:bgl+' – Noir',qty:bSp.noir,color:'noir'});
     if(bSp.cristal>0)B.push({name:bgl+' – Cristal',qty:bSp.cristal,color:'cristal'});
 
-    const r5T=2*N + 2*piT;
+    const r5T=2*nP+2;
     const r5Sp=resolveColors(r5T,p.r5_mode||'mixte',p.r5_noir,p.r5_cristal,p.r5_fenetre,p.r5_secours);
     if(r5Sp.error)return{error:'Rideau 5m: total couleurs ('+r5Sp.used+') > total ('+r5Sp.total+').'};
     const rgl='Rideau 5m';
@@ -892,7 +886,7 @@ const LP={
     if(pSp.noir>0)   B.push({name:pgl+' – Noir',qty:pSp.noir,color:'noir'});
     if(pSp.cristal>0)B.push({name:pgl+' – Cristal',qty:pSp.cristal,color:'cristal'});
 
-    A.set('Barre tension rideau 5m',r5T);
+    A.set('Barre tension rideau 5m (en bas)',r5T);
     const oi=n=>{const i=this.ORD.findIndex(r=>r.test(n));return i<0?999:i;};
     const Ar=[...A.entries()].map(([n,q])=>({name:n,qty:q})).sort((a,b)=>oi(a.name)-oi(b.name));
 
