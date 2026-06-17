@@ -2400,6 +2400,12 @@ function paramsHTML(prof){
         <button class="tbtn \${S.piquetSize==='120'?'on':''}" onclick="setT('piquetSize','120',this)">120 cm</button>
       </div></div>
     </div>
+    <div class="fr">
+      <div class="fg"><label>Lumière</label><div class="trow">
+        <button class="tbtn \${S.lumiere==='avec'?'on':''}" onclick="setT('lumiere','avec',this)">Avec</button>
+        <button class="tbtn \${S.lumiere==='sans'?'on':''}" onclick="setT('lumiere','sans',this)">Sans</button>
+      </div></div>
+    </div>
     ${plancherZonesHTML()}`;
   if(prof==='p334') return refField + `
     <div class="fr">
@@ -2439,6 +2445,12 @@ function paramsHTML(prof){
     <div class="warn-box" style="background:#e8f4f8;border-color:#bee5eb;color:#0c5460;margin-top:6px;">
       📐 <b>Règle câbles P334</b> : max 15m entre positions câblées (3 modules)<br>
       <small>câble → sans → sans → sans → câble</small>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>Lumière</label><div class="trow">
+        <button class="tbtn \${S.lumiere==='avec'?'on':''}" onclick="setT('lumiere','avec',this)">Avec</button>
+        <button class="tbtn \${S.lumiere==='sans'?'on':''}" onclick="setT('lumiere','sans',this)">Sans</button>
+      </div></div>
     </div>
     ${plancherZonesHTML()}`;
   if(prof==='commande') return `<div id="cmd-params-inner"></div>`;
@@ -2690,6 +2702,9 @@ function switchProfile(prof, tabEl){
   S.profile = prof;
   S.pignonInter = 0;
   S._cfgRef = '';
+  // Reset overrides, extras et LAST pour éviter contamination entre configs
+  Object.keys(OV).forEach(k=>delete OV[k]);
+  if(window.OV_EXTRA){ OV_EXTRA.A=[]; OV_EXTRA.B=[]; }
   document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
   if(tabEl) tabEl.classList.add('active');
   // Ré-évaluer l'overlay de sync : visible uniquement dans le module Chantiers
@@ -3156,13 +3171,8 @@ function calcAddToCommande(){
   const lbl=S._savedName||gv('designation')||autoLbl;
   const snap=JSON.stringify(typeof getSnap==='function'?getSnap():S);
   ch.configs=ch.configs||[];
-  // Verificar se já existe config deste perfil com mesmo label — actualizar em vez de duplicar
-  const existing=ch.configs.find(x=>x.type===S.profile&&x.label===lbl);
-  if(existing){
-    existing.snap=snap; existing.detail=autoLbl;
-  } else {
-    ch.configs.push({id:'cfg'+Date.now(),type:S.profile,label:lbl,detail:autoLbl,snap});
-  }
+  // Toujours ajouter comme nouvelle config (ID unique = timestamp+random)
+  ch.configs.push({id:'cfg'+Date.now()+'_'+Math.random().toString(36).slice(2,6),type:S.profile,label:lbl,detail:autoLbl,snap});
   chSave();
   syncStatus('💾 Local OK — sync…','#2563eb',0);
   // Sync vers Supabase avec feedback visible
@@ -3354,6 +3364,8 @@ function getSnap(){
   return {...p,profile:S.profile,season:S.season,sablieres:S.sablieres,
     heavyFloor:S.heavyFloor,lumiere:S.lumiere,pignonInter:S.pignonInter||0,
     _cfgRef:S._cfgRef||'',
+    _extraA:(window.OV_EXTRA?.A||[]).filter(r=>r.name&&r.qty>0),
+    _extraB:(window.OV_EXTRA?.B||[]).filter(r=>r.name&&r.qty>0),
     chantier:gv('chantier'),client:gv('client'),
     dateOut:gv('dateOut'),dateBack:gv('dateBack'),
     overrides:{...OV},
@@ -6571,7 +6583,7 @@ function bonPreparationChantier(){
       else if(t.profil==='p240')   res=P240.build(p);
       else if(t.profil==='p334')   res=P334.build(p);
       else if(t.profil==='pontdanse') res=PDANSE.build(p);
-      else if(t.profil==='pagode') res=PAGODE.build({pagodeSz:+t.largeur,pagodeNb:+(t._pagodeNb||1)});
+      else if(t.profil==='pagode') res=PAGODE.build({pagodeSz:+t.largeur,pagodeNb:+(t._pagodeNb||1),lumiere:t.lumiere||'avec'});
       else if(t.profil==='plancher') res=PLANCHER.build({plancherW:+t.largeur,plancherL:+t.longueur,plancherPan:'0.85'});
       if(res && !res.error){
         const A = res.A.map(r=>t._overrides&&t._overrides[r.name]!==undefined?{...r,qty:t._overrides[r.name]}:r).filter(r=>r.qty>0);
@@ -6832,7 +6844,7 @@ function cmdBuildMaterials(t){
     else if(t.profil==='p240') res=P240.build(p);
     else if(t.profil==='p334') res=P334.build(p);
     else if(t.profil==='pontdanse') res=PDANSE.build(p);
-    else if(t.profil==='pagode') res=PAGODE.build({pagodeSz:+t.largeur,pagodeNb:+(t._pagodeNb||1)});
+    else if(t.profil==='pagode') res=PAGODE.build({pagodeSz:+t.largeur,pagodeNb:+(t._pagodeNb||1),lumiere:t.lumiere||'avec'});
     else if(t.profil==='plancher') res=PLANCHER.build({plancherW:+t.largeur,plancherL:+t.longueur,plancherTube:t._plancherTube||'auto',plancherPan:t._plancherPan||'0.85'});
     else return null;
     if(res.error) return null;
@@ -7943,6 +7955,12 @@ function renderPagode(){
 
 function pagodeParamsLeft(){
   return `
+    <div class="f1" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+      <label>Référence</label>
+      <input id="cfg-ref" type="text" placeholder="ex: Cantina, Scène, Bar, Podium…"
+        oninput="S._cfgRef=this.value;autoCalc()"
+        value="${S._cfgRef||''}">
+    </div>
     <div style="margin-bottom:12px">
       <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px">Taille</div>
       ${[3,4,5].map(sz=>`
@@ -7961,6 +7979,13 @@ function pagodeParamsLeft(){
         <span style="font-size:20px;font-weight:900;color:var(--text);min-width:30px;text-align:center">${S.pagodeNb}</span>
         <button onclick="S.pagodeNb=Math.min(20,S.pagodeNb+1);renderPagode()" style="width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:18px;font-weight:700;font-family:var(--font)">+</button>
         <span style="font-size:11px;color:var(--text3)">${S.pagodeSz*S.pagodeSz*S.pagodeNb} m² total</span>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">Lumière</div>
+      <div class="trow">
+        <button class="tbtn ${S.lumiere==='avec'?'on':''}" onclick="setT('lumiere','avec',this)">Avec</button>
+        <button class="tbtn ${S.lumiere==='sans'?'on':''}" onclick="setT('lumiere','sans',this)">Sans</button>
       </div>
     </div>
     <div style="margin-top:8px;background:var(--bg3);border-radius:7px;padding:8px 10px;font-size:10px;color:var(--text3)">
@@ -8938,13 +8963,20 @@ function chOpenConfig(cfg){
   if(!cfg.snap){switchProfile(prof,ptab);return;}
   let sn; try{sn=JSON.parse(cfg.snap);}catch(e){switchProfile(prof,ptab);return;}
   S._savedName=cfg.label||'';
-  try{ const _sn2=cfg.snap?JSON.parse(cfg.snap):{}; S._cfgRef=_sn2._cfgRef||''; }catch(e){ S._cfgRef=''; }
+  // 1. switchProfile EN PREMIER (reset OV, OV_EXTRA, _cfgRef)
   switchProfile(prof,ptab);
+  // 2. Restaurer TOUT après le reset
+  S._cfgRef=sn._cfgRef||'';
+  if(window.OV_EXTRA){
+    OV_EXTRA.A=(sn._extraA||[]);
+    OV_EXTRA.B=(sn._extraB||[]);
+  }
+  Object.keys(OV).forEach(k=>delete OV[k]);
+  if(sn.overrides) Object.assign(OV,sn.overrides);
   setTimeout(()=>{
     const sv=(id,v)=>{const e=$(id);if(e&&v!=null&&v!=='')e.value=v;};
     ['largeur','longueur','hauteur','width','length','tents','height',
      'pignonInter','portique3','portique6','fixation','largeur334','lpLargeur','lpCV'].forEach(id=>sv(id,sn[id]));
-    // Restaurar referência no campo DOM
     if(sn._cfgRef){ S._cfgRef=sn._cfgRef; sv('cfg-ref',sn._cfgRef); }
     if(sn.lpLargeur) S.lpLargeur=sn.lpLargeur;
     if(sn.lpCV!=null) S.lpCV=+sn.lpCV;
@@ -8965,8 +8997,6 @@ function chOpenConfig(cfg){
     if(sn.plancherW)S.plancherW=sn.plancherW;
     if(sn.plancherL)S.plancherL=sn.plancherL;
     if(sn.plancherPan)S.plancherPan=sn.plancherPan;
-    Object.keys(OV).forEach(k=>delete OV[k]);
-    if(sn.overrides)Object.assign(OV,sn.overrides);
     ['ri5_mode','ri5_noir','ri5_cristal','ri5_fenetre','ri5_secours',
      'ri2_mode','ri2_noir','ri2_cristal','p_mode','p_noir','p_cristal',
      'b_mode','b_noir','b_cristal'].forEach(id=>sv(id,sn[id]));
@@ -9250,7 +9280,7 @@ function printChantier(){
       else if(sn.profile==='p240')      res=P240.build(p);
       else if(sn.profile==='p334')      res=P334.build(p);
       else if(sn.profile==='pontdanse') res=PDANSE.build(p);
-      else if(sn.profile==='pagode')    res=PAGODE.build({pagodeSz:+(sn.pagodeSz||3),pagodeNb:+(sn.pagodeNb||1)});
+      else if(sn.profile==='pagode')    res=PAGODE.build({pagodeSz:+(sn.pagodeSz||3),pagodeNb:+(sn.pagodeNb||1),lumiere:sn.lumiere||'avec'});
       else if(sn.profile==='plancher')  res=PLANCHER.build({plancherW:+(sn.plancherW||10),plancherL:+(sn.plancherL||20),plancherPan:sn.plancherPan||'0.85',plancherZones:sn.plancherZones||[]});
     }catch(e){console.warn('buildBonHTML error',sn.profile,e);}
     if(!res||res.error) return '';
