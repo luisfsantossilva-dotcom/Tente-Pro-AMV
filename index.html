@@ -2088,7 +2088,8 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
   const barCount = barPositions.length;
   const barLabel = barCount===0 ? 'Sans barre de fermeture' : barCount+' barre'+(barCount>1?'s':'')+' / pignon';
   const titleLbl = `${W}m × ${Ltot}m × ${H_label}`;
-  // Textes informatifs supprimés (redondants avec la désignation)
+  svg += `<text x="8" y="15" font-size="9.5" fill="${E_DIM}" font-weight="600">Vue pignon avant — ${titleLbl}</text>`;
+  svg += `<text x="8" y="27" font-size="9" fill="${E_HIDD}">${barLabel}</text>`;
 
   // Légende dynamique
   const legend = [];
@@ -2123,7 +2124,7 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
   }
 
   const wrap = document.getElementById(svgId);
-  if(wrap) wrap.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="130" viewBox="0 0 ${VW} ${VH}" style="display:block;">${svg}</svg>`;
+  if(wrap) wrap.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="220" viewBox="0 0 ${VW} ${VH}" style="display:block;">${svg}</svg>`;
 }
 
 
@@ -2258,8 +2259,7 @@ function paramsHTML(prof){
       <label>Référence</label>
       <input id="cfg-ref" type="text" placeholder="ex: Cantina, Scène, Bar, Podium…"
         oninput="S._cfgRef=this.value;autoCalc()"
-        value="${S._cfgRef||''}">
-    </div>`;
+        value="${S._cfgRef||''}"></div>`;
   if(prof==='p93') return refField + `
     <div class="fr">
       <div class="fg"><label>Largeur (m)</label>
@@ -2349,8 +2349,8 @@ function paramsHTML(prof){
     </div>
     <div class="fr">
       <div class="fg"><label>Lumière</label><div class="trow">
-        <button class="tbtn \${S.lumiere==='avec'?'on':''}" onclick="setT('lumiere','avec',this)">Avec</button>
-        <button class="tbtn \${S.lumiere==='sans'?'on':''}" onclick="setT('lumiere','sans',this)">Sans</button>
+        <button class="tbtn ${S.lumiere==='avec'?'on':''}" onclick="setT('lumiere','avec',this)">Avec</button>
+        <button class="tbtn ${S.lumiere==='sans'?'on':''}" onclick="setT('lumiere','sans',this)">Sans</button>
       </div></div>
     </div>
     <div class="warn-box" style="background:#fef3c7;border-color:#fbbf24;color:#78350f;margin-top:6px;">
@@ -2400,12 +2400,6 @@ function paramsHTML(prof){
         <button class="tbtn \${S.piquetSize==='120'?'on':''}" onclick="setT('piquetSize','120',this)">120 cm</button>
       </div></div>
     </div>
-    <div class="fr">
-      <div class="fg"><label>Lumière</label><div class="trow">
-        <button class="tbtn \${S.lumiere==='avec'?'on':''}" onclick="setT('lumiere','avec',this)">Avec</button>
-        <button class="tbtn \${S.lumiere==='sans'?'on':''}" onclick="setT('lumiere','sans',this)">Sans</button>
-      </div></div>
-    </div>
     ${plancherZonesHTML()}`;
   if(prof==='p334') return refField + `
     <div class="fr">
@@ -2440,12 +2434,6 @@ function paramsHTML(prof){
     </div>
     <div class="fr">
       <div class="fg"><label>Pignons intermédiaires</label><input id="pignonInter" type="number" value="${S.pignonInter||0}" min="0" max="10" oninput="S.pignonInter=+this.value;autoCalc()"></div>
-    </div>
-    <div class="fr">
-      <div class="fg"><label>Lumière</label><div class="trow">
-        <button class="tbtn \${S.lumiere==='avec'?'on':''}" onclick="setT('lumiere','avec',this)">Avec</button>
-        <button class="tbtn \${S.lumiere==='sans'?'on':''}" onclick="setT('lumiere','sans',this)">Sans</button>
-      </div></div>
     </div>
     <div class="warn-box" id="p334-warn" style="display:none;background:#fff3cd;border-color:#ffc107;color:#856404;"></div>
     <div class="warn-box" style="background:#e8f4f8;border-color:#bee5eb;color:#0c5460;margin-top:6px;">
@@ -3028,10 +3016,8 @@ function autoCalc(){
     if(p.p_baseOv!==undefined) applyBaseOv('Pignon',p.p_baseOv);
     if(p.b_baseOv!==undefined) applyBaseOv('Bâche',p.b_baseOv);
   }
-  // Appliquer la référence à la désignation
   if(S._cfgRef && S._cfgRef.trim()) res.des = res.des + ' — ' + S._cfgRef.trim();
   LAST = res;
-  // Réinitialiser le bouton "Ajouter au chantier" à chaque nouveau calcul
   const _btnAdd = document.getElementById('btn-add-chantier');
   if(_btnAdd && _btnAdd.textContent !== '➕ Chantier'){
     _btnAdd.textContent = '➕ Chantier';
@@ -3575,8 +3561,6 @@ function bonPreparation(){
   // PRIORITÉ : chantier ACTIF (module Chantiers) > inputs > draft CRM
   // (les inputs gardent des valeurs résiduelles d'anciens chantiers — bug "FLEURIER")
   const _ch     = (typeof chGetActive==='function') ? chGetActive() : null;
-  // Chantier actif → ses données exclusivement
-  // Pas de chantier actif → champs vides (pas de gv() ni de draft pour éviter données fantômes)
   const chantier= _ch ? (_ch.nom   ||'') : '';
   const client  = _ch ? (_ch.client||'') : '';
   const dateOut = _ch ? (_ch.out   ||'') : '';
@@ -3600,20 +3584,15 @@ function bonPreparation(){
 
   // SVG visualizer
   const vizEl  = document.getElementById('tent-svg-wrap');
-  let vizHTML = (vizEl&&vizEl.innerHTML&&vizEl.innerHTML.trim()) ? vizEl.innerHTML : '';
-  // Corriger le SVG pour l'impression: remplacer height fixe par viewBox proportionnel
-  if(vizHTML) {
-    vizHTML = vizHTML.replace(/(<svg[^>]*?)\s+height="[^"]*"/i, '$1');
-    vizHTML = vizHTML.replace(/(<svg[^>]*?)(\s+viewBox="[^"]*")/, '$1 height="auto"$2');
-  }
+  const vizHTML= (vizEl&&vizEl.innerHTML&&vizEl.innerHTML.trim()) ? vizEl.innerHTML : '';
 
   // Build table rows
   let _rowIdx=0;
   const row=(name,qty,sec)=>{
     const idx=_rowIdx++;
     return `<tr id="bpr-${sec}-${idx}">
-      <td class="nom">${esc(name)}</td>
-      <td class="qty"><input type="number" value="${qty}" min="0" style="width:38px;text-align:center;border:1px solid #cbd5e1;border-radius:4px;padding:1px 3px;font-size:9pt;font-weight:700;color:#b91c1c;background:#fff;font-family:inherit" onchange="this.closest('tr').style.background=this.value=='${qty}'?'':'#fffbeb'" /></td>
+      <td style="vertical-align:top">${esc(name)}</td>
+      <td class="qty"><input type="number" value="${qty}" min="0" style="width:46px;text-align:right;border:1px solid #cbd5e1;border-radius:4px;padding:1px 3px;font-size:9pt;font-weight:700;color:#b91c1c;background:#fff;font-family:inherit" onchange="this.closest('tr').style.background=this.value=='${qty}'?'':'#fffbeb'" /></td>
       <td class="chk"><input type="checkbox" style="width:14px;height:14px;cursor:pointer;accent-color:#b91c1c" /></td>
       <td class="obs"><input type="text" placeholder="Obs." style="width:100%;border:none;border-bottom:1px solid #e2e8f0;font-size:8pt;color:#64748b;background:transparent;font-family:inherit" /></td>
     </tr>`;
@@ -3639,65 +3618,48 @@ function bonPreparation(){
   w.document.write(`<!DOCTYPE html><html lang="fr"><head>
 <meta charset="UTF-8">
 <title>Bon de Préparation</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Nunito','Segoe UI',Arial,sans-serif;font-size:9.5pt;color:#1e293b;padding:8mm 12mm}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:9.5pt;color:#1e293b;padding:12mm 14mm}
 /* ── PRINT ── */
 @media print{
   .no-print{display:none!important}
-  body{padding:5mm 8mm}
+  body{padding:8mm 10mm}
   @page{size:A4 portrait;margin:0}
   table{page-break-inside:auto}
   tr{page-break-inside:avoid}
   .sec-block{page-break-inside:avoid}
 }
 /* ── HEADER ── */
-.hdr{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #b91c1c;padding-bottom:4px;margin-bottom:5px}
-.hdr-logo img{height:32px}
+.hdr{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #b91c1c;padding-bottom:6px;margin-bottom:8px}
+.hdr-logo img{height:40px}
 .hdr-title{text-align:right}
-.hdr-title h1{font-size:12pt;font-weight:800;color:#b91c1c;line-height:1}
+.hdr-title h1{font-size:15pt;font-weight:800;color:#b91c1c;line-height:1}
 .hdr-title .sub{font-size:8pt;color:#64748b;margin-top:2px}
 /* ── META ── */
-.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:5px;padding:4px 8px;margin-bottom:5px}
+.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;margin-bottom:8px}
 .meta-item{display:flex;flex-direction:column}
 .meta-lbl{font-size:7pt;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8}
-.meta-val{font-size:9pt;font-weight:700;color:#1e293b}
+.meta-val{font-size:9.5pt;font-weight:700;color:#1e293b}
 /* ── VIZ ── */
-.viz-wrap{margin-bottom:5px;border:1px solid #e2e8f0;border-radius:5px;overflow:hidden;background:#f8fafc;padding:2px}
-.viz-wrap svg{width:100%;height:auto;display:block;max-height:140px}
+.viz-wrap{margin-bottom:8px;border:1px solid #e2e8f0;border-radius:5px;overflow:hidden;background:#f8fafc;padding:4px}
+.viz-wrap svg{max-width:100%;height:auto;display:block;margin:auto}
 /* ── DESIGNATION ── */
-.desig-ref{background:#1e293b;color:#fff;border-radius:4px 4px 0 0;padding:2px 8px;font-size:8pt;font-weight:800;letter-spacing:.3px;margin-bottom:0}
-.desig-cfg{background:#334155;color:#fff;border-radius:0 0 4px 4px;padding:3px 8px;font-size:9pt;font-weight:700;margin-bottom:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
-.desig-cfg-only{background:#1e293b;color:#fff;border-radius:4px;padding:3px 8px;font-size:9pt;font-weight:700;margin-bottom:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
-.dpill{background:rgba(255,255,255,.18);border-radius:12px;padding:2px 9px;font-size:8.5pt;font-weight:700;white-space:nowrap}
+.desig{background:#1e293b;color:#fff;border-radius:5px;padding:4px 10px;font-size:9.5pt;font-weight:700;margin-bottom:6px}
 /* ── TABLES ── */
-.sec-block{margin-bottom:5px}
+.sec-block{margin-bottom:8px}
 .sec-hdr{font-size:8.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:#475569;color:#fff;padding:3px 8px;border-radius:4px 4px 0 0}
 .sec-hdr.textile{background:#92400e}
 .sec-hdr.plancher{background:#166534}
-table{width:100%;border-collapse:collapse;font-size:9.5pt;table-layout:auto}
-thead th{background:#f1f5f9;font-weight:800;font-size:8pt;text-transform:uppercase;letter-spacing:.3px;padding:3px 6px;border-bottom:1.5px solid #cbd5e1;text-align:left}
-/* table: col nom colle au contenu, cols fixes à droite */
-table{table-layout:auto}
-col.c-nom{width:1%}
-col.c-qty{width:46px}
-col.c-chk{width:30px}
-col.c-obs{width:auto}
-td.nom,th.nom{white-space:nowrap;padding-right:6px}
-th.qty{text-align:center;width:46px;font-weight:700;color:#b91c1c;padding:3px 4px}
-td.qty{text-align:center;width:46px;font-weight:700;color:#b91c1c;padding:2px 4px}
-td.qty input{text-align:center;width:36px;display:block;margin:0 auto}
-th.chk,td.chk{text-align:center;width:30px;color:#94a3b8;font-size:11pt;padding:2px 3px}
-th.obs,td.obs{font-size:8.5pt;color:#64748b;padding-left:6px}
-td.obs input{width:100%;min-width:80px}
+table{width:100%;border-collapse:collapse;font-size:9pt}
+thead th{background:#f1f5f9;font-weight:700;font-size:8pt;text-transform:uppercase;letter-spacing:.3px;padding:3px 6px;border-bottom:1.5px solid #cbd5e1;text-align:left}
+th.qty,td.qty{text-align:right;width:40px;font-weight:700;color:#b91c1c}
+th.chk,td.chk{text-align:center;width:32px;color:#94a3b8;font-size:11pt}
+th.obs,td.obs{width:120px;font-size:8.5pt;color:#64748b}
 @media print{.no-print{display:none!important}.btn-bar{display:none!important}}
-td{padding:1px 5px;border-bottom:1px solid #f1f5f9;vertical-align:middle;line-height:1.2}
+td{padding:2.5px 6px;border-bottom:1px solid #f1f5f9;vertical-align:top;line-height:1.3}
 tr:last-child td{border-bottom:none}
-tbody tr:nth-child(even){background:#f8fafc}
-tbody tr:nth-child(odd){background:#fff}
-tr:hover{background:#f1f5f9}
+tr:hover{background:#fafafa}
 /* ── PLANCHER ── */
 .zone-lbl{font-weight:700;font-size:8.5pt;color:#166534;padding:3px 6px;background:#f0fdf4;border-left:3px solid #16a34a;margin:4px 0 2px}
 /* ── SIGNATURES ── */
@@ -3741,19 +3703,7 @@ tr:hover{background:#f1f5f9}
 </div>
 
 <!-- DESIGNATION -->
-${(()=>{
-  const cfgRef = S._cfgRef && S._cfgRef.trim() ? S._cfgRef.trim() : '';
-  const rawDes = (LAST.des||'').replace(' \u2014 '+cfgRef,'').replace('\u2014 '+cfgRef,'').trim();
-  // Construire les pills en parsant rawDes (séparateurs – et ·)
-  const parts = rawDes.split(/\s*[\u2013\xb7]\s*/).map(function(p){return p.trim();}).filter(Boolean);
-  if(LAST.surface && !parts.some(function(p){return p.includes('m\xb2');})) parts.push(LAST.surface+' m\xb2');
-  const pillsHTML = parts.map(function(p){return '<span class="dpill">'+esc(p)+'</span>';}).join('');
-  if(cfgRef){
-    return '<div class="desig-ref">\uD83D\uDCCB '+esc(cfgRef)+'</div><div class="desig-cfg">'+pillsHTML+'</div>';
-  } else {
-    return '<div class="desig-cfg-only">'+pillsHTML+'</div>';
-  }
-})()}
+<div class="desig">${esc(LAST.des||'')}${LAST.surface?' · '+LAST.surface+' m²':''}</div>
 
 <!-- VISUALISEUR SVG -->
 ${vizHTML?`<div class="viz-wrap">${vizHTML}</div>`:''}
@@ -3761,14 +3711,14 @@ ${vizHTML?`<div class="viz-wrap">${vizHTML}</div>`:''}
 <!-- A — STRUCTURE -->
 ${structRows?`<div class="sec-block">
   <div class="sec-hdr">A — Structure</div>
-  <table><colgroup><col class="c-nom"><col class="c-qty"><col class="c-chk"><col class="c-obs"></colgroup><thead><tr><th class="nom">Pièce</th><th class="qty">Qté</th><th class="chk">✓</th><th class="obs">Observations</th></tr></thead>
+  <table><thead><tr><th>Pièce</th><th class="qty">Qté</th><th class="chk">✓</th><th>Observations</th></tr></thead>
   <tbody>${structRows}</tbody></table>
 </div>`:''}
 
 <!-- B — TEXTILE -->
 ${textileRows?`<div class="sec-block">
   <div class="sec-hdr textile">B — Textile</div>
-  <table><colgroup><col class="c-nom"><col class="c-qty"><col class="c-chk"><col class="c-obs"></colgroup><thead><tr><th class="nom">Élément</th><th class="qty">Qté</th><th class="chk">✓</th><th class="obs">Observations</th></tr></thead>
+  <table><thead><tr><th>Élément</th><th class="qty">Qté</th><th class="chk">✓</th><th>Observations</th></tr></thead>
   <tbody>${textileRows}</tbody></table>
 </div>`:''}
 
@@ -3778,7 +3728,21 @@ ${plancherHTML?`<div class="sec-block">
   ${plancherHTML}
 </div>`:''}
 
-
+<!-- AJOUTER PIECES -->
+<div class="sec-block no-print" id="add-piece-block" style="margin-top:8px">
+  <div class="sec-hdr" style="background:#475569;cursor:pointer" onclick="toggleAddPiece()">➕ Ajouter une pièce / observation</div>
+  <div id="add-piece-inner" style="padding:6px 8px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none;display:none">
+    <div style="display:grid;grid-template-columns:1fr 60px auto auto;gap:6px;align-items:center;margin-bottom:6px">
+      <input id="np-name" type="text" placeholder="Nom de la pièce" style="padding:4px 7px;border:1px solid #cbd5e1;border-radius:4px;font-size:9pt;font-family:inherit">
+      <input id="np-qty" type="number" value="1" min="1" placeholder="Qté" style="padding:4px 5px;border:1px solid #cbd5e1;border-radius:4px;font-size:9pt;text-align:right;font-family:inherit">
+      <select id="np-sec" style="padding:4px 6px;border:1px solid #cbd5e1;border-radius:4px;font-size:9pt;font-family:inherit">
+        <option value="A">Structure</option>
+        <option value="B">Textile</option>
+      </select>
+      <button onclick="addBonPiece()" style="padding:4px 10px;background:#b91c1c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:9pt;font-weight:700;font-family:inherit">＋</button>
+    </div>
+  </div>
+</div>
 
 <!-- NOTES LIBRES -->
 <div style="margin:8px 0 10px">
@@ -6171,7 +6135,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;font-size:10pt;color:#1e293b;backgr
 .btn-close{background:#f1f5f9;color:#1e293b;border:1px solid #e2e8f0}
 @media print{
   .btn-bar{display:none}
-  body{padding:5mm 8mm}
+  body{padding:8mm 10mm}
   .section{break-inside:avoid}
 }
 </style>
@@ -7984,13 +7948,6 @@ function pagodeParamsLeft(){
         <span style="font-size:11px;color:var(--text3)">${S.pagodeSz*S.pagodeSz*S.pagodeNb} m² total</span>
       </div>
     </div>
-    <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px">
-      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px">Lumière</div>
-      <div class="trow">
-        <button class="tbtn \${S.lumiere==='avec'?'on':''}" onclick="setT('lumiere','avec',this)">Avec</button>
-        <button class="tbtn \${S.lumiere==='sans'?'on':''}" onclick="setT('lumiere','sans',this)">Sans</button>
-      </div>
-    </div>
     <div style="margin-top:8px;background:var(--bg3);border-radius:7px;padding:8px 10px;font-size:10px;color:var(--text3)">
       Utilisez <strong>➕ Chantier</strong> et <strong>🖨 Bon de préparation</strong> dans la barre en haut.
     </div>`;
@@ -8966,6 +8923,7 @@ function chOpenConfig(cfg){
   if(!cfg.snap){switchProfile(prof,ptab);return;}
   let sn; try{sn=JSON.parse(cfg.snap);}catch(e){switchProfile(prof,ptab);return;}
   S._savedName=cfg.label||'';
+  try{ const _sn2=cfg.snap?JSON.parse(cfg.snap):{}; S._cfgRef=_sn2._cfgRef||''; }catch(e){ S._cfgRef=''; }
   switchProfile(prof,ptab);
   setTimeout(()=>{
     const sv=(id,v)=>{const e=$(id);if(e&&v!=null&&v!=='')e.value=v;};
@@ -9100,7 +9058,7 @@ function chMiniResumo(ch){
       +'<div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--text3);margin-bottom:3px;display:flex;align-items:center;gap:4px"><div style="width:5px;height:5px;border-radius:50%;background:'+cat.col+'"></div>'+cat.lbl+'<span style="font-size:9px;background:var(--bg4);padding:0 5px;border-radius:8px;color:var(--text2)">'+cat.items.length+'</span></div>'
       +cat.items.map(it=>'<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">'
         +'<div onclick="chOpenConfigById(\''+it.id+'\')" style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;flex:1;min-width:0" onmouseover="this.style.borderColor=\'var(--red)\';this.style.background=\'rgba(185,28,28,.09)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'var(--bg3)\'">'
-        +'<span style="font-size:11.5px;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.label)+'</span>'
+        +'<div style="flex:1;min-width:0"><div style="font-size:11.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.label)+'</div>'+(function(){try{var _s=JSON.parse(it.snap||'{}');return _s._cfgRef?'<div style="font-size:10px;color:#2563eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">ℹ️ '+esc(_s._cfgRef)+'</div>':''}catch(e){return ''}}())+'</div>'
         +'<span style="font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:9px;'+tgc[cat.cls]+'">'+it.label.split(' ')[0]+'</span>'
         +'<span style="font-size:10px;color:var(--text3)">↗</span></div>'
         +'<button onclick="chRemoveConfig(\''+it.id+'\')" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid #fca5a5;background:#fef2f2;color:#dc2626;font-size:12px;line-height:1;cursor:pointer;padding:0" title="Retirer">×</button>'
@@ -9131,7 +9089,7 @@ function chantierRight(){
       +'<span style="font-size:9.5px;color:var(--text3);margin-left:auto">'+items.length+' config'+(items.length!==1?'s':'')+'</span></div>'
       +items.map(it=>'<div style="display:flex;align-items:center;border-bottom:1px solid var(--border)">'
         +'<div onclick="chOpenConfigById(\''+it.id+'\')" style="display:flex;align-items:center;gap:10px;padding:9px 14px 9px 18px;cursor:pointer;flex:1" onmouseover="this.style.background=\'rgba(185,28,28,.09)\'" onmouseout="this.style.background=\'transparent\'">'        +'<div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text)">'+esc(it.label)+'</div>'
-        +(it.detail?'<div style="font-size:11px;color:var(--text3);margin-top:1px">'+esc(it.detail)+'</div>':'')
+        +(it.detail?'<div style="font-size:11px;color:var(--text3);margin-top:1px">'+esc(it.detail)+'</div>':'')+(function(){try{var _s=JSON.parse(it.snap||'{}');return _s._cfgRef?'<div style="font-size:11px;font-weight:700;color:#2563eb;margin-top:2px">ℹ️ '+esc(_s._cfgRef)+'</div>':''}catch(e){return ''}}())
         +'</div><span style="font-size:10.5px;font-weight:800;padding:2px 9px;border-radius:20px;'+tc[col]+'">'+it.label.split(' ')[0]+'</span>'
         +'<span style="font-size:13px;color:var(--text3)">↗</span></div>'
         +'<button onclick="chRemoveConfig(\''+it.id+'\')" style="margin-right:12px;flex-shrink:0;width:22px;height:22px;border-radius:50%;border:1px solid #fca5a5;background:#fef2f2;color:#dc2626;font-size:13px;line-height:1;cursor:pointer;padding:0" title="Retirer">×</button>'
