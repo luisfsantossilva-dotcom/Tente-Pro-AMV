@@ -538,8 +538,8 @@ const P93={
     add('Arceau',arc);add('Tube 30×30',(this.T30[L]||0)*mod);
     const qL=(L<=8?1:2)*mod;
     if(lum==='avec'){add('Tube 60×40 (avec lumière)',qL);add('Ampoule',qL);}
-    else{(L<=8)?add('Tube 60×40',qL):add('Tube 30×30',qL);}
-    add('Tube 60×40',(this.T60[L]||0)*mod);add('Croix',cf);
+    // Sans lumière: tous les tubes avec lumière deviennent des tubes 60×40 normaux
+    add('Tube 60×40',(this.T60[L]||0)*mod + (lum==='sans' ? qL : 0));add('Croix',cf);
     if(L>=4)add('Câble de toit',cab,this.CD[L]+' mm');
     if(bra)add('Bracon',bra);if(p3)add('Portique 3 m',p3);if(p6)add('Portique 6 m',p6);
     // Portique retire des tubes 60×40 (1 par portique 3m, 2 par portique 6m)
@@ -677,7 +677,7 @@ const P93={
    ENGINE P240
 ══════════════════════════════════════ */
 const P240={
-  PM:{10:{te:2,th:2,s6e:0,s6h:2,t12:3,be:2,bh:4},12:{te:2,th:4,s6e:2,s6h:2,t12:3,be:2,bh:4},15:{te:2,th:4,s6e:2,s6h:4,t12:3,be:2,bh:4},16:{te:2,th:4,s6e:4,s6h:6,t12:3,be:4,bh:4},20:{te:4,th:6,s6e:2,s6h:6,t12:3,be:4,bh:6},25:{te:4,th:8,s6e:4,s6h:8,t12:3,be:4,bh:8}},
+  PM:{10:{te:2,th:2,s6e:0,s6h:4,t12:3,be:2,bh:4},12:{te:2,th:2,s6e:2,s6h:6,t12:3,be:2,bh:4},15:{te:2,th:2,s6e:2,s6h:8,t12:3,be:2,bh:4},16:{te:2,th:2,s6e:4,s6h:8,t12:3,be:4,bh:4},20:{te:4,th:4,s6e:2,s6h:10,t12:3,be:4,bh:6},25:{te:4,th:4,s6e:4,s6h:14,t12:3,be:4,bh:8}},
   FX:{10:{bf4:1,bf5:0,t5:0,t2p:0,t3p:0,r5:2,r2p:0,r3p:0,tp12p:2,tp12s:0,tr5a:0,tr5s:1,tr3s:0,pgl:'Pignon complet 10m',ptb:1},12:{bf4:2,bf5:0,t5:0,t2p:1,t3p:0,r5:2,r2p:1,r3p:0,tp12p:2,tp12s:0,tr5a:0,tr5s:1,tr3s:0,pgl:'Pignon complet 12m',ptb:2},15:{bf4:2,bf5:0,t5:0,t2p:0,t3p:2,r5:3,r2p:0,r3p:2,tp12p:0,tp12s:0,tr5a:3,tr5s:1,tr3s:0,pgl:'Pignon complet 15m',ptb:2},16:{bf4:2,bf5:1,t5:0,t2p:0,t3p:2,r5:2,r2p:0,r3p:2,tp12p:2,tp12s:0,tr5a:0,tr5s:1,tr3s:2,pgl:'Pignon complet 16m',ptb:3},20:{bf4:2,bf5:1,t5:0,t2p:0,t3p:0,r5:4,r2p:0,r3p:0,tp12p:2,tp12s:2,tr5a:1,tr5s:2,tr3s:0,pgl:'Pignon complet 20m',ptb:3},25:{bf4:2,bf5:2,t5:0,t2p:0,t3p:0,r5:5,r2p:0,r3p:0,tp12p:2,tp12s:2,tr5a:1,tr5s:2,tr3s:0,pgl:'Pignon complet 25m',ptb:4}},
   DIM:{fm:{10:5390,12:6442,15:8017,16:8678,20:10648,25:13277},ct:{10:6675,12:7681,15:8764,16:9536,20:11286,25:13716},bm:{10:11845,12:13949,15:17099,16:18421,20:22361,25:27619},cp:{H3:5490,H4:6077,H5:6950}},
   CA:{pcp:4,pcf:4,cp:4,ct:4},
@@ -687,7 +687,7 @@ const P240={
   build(p){
     const w=+p.width||20,L=+p.length||10,tn=Math.max(1,+p.tents||1);
     const H=p.height||'H3',sea=p.season||'ete',sab=p.sablieres||'non';
-    const fix=p.fixation||'piquets',hf=p.heavyFloor||'non';
+    const fix=p.fixation||'piquets',hf=p.heavyFloor||'non',lum=p.lumiere||'avec';
     if(L<=0)return{error:'Longueur invalide.'};
     const f=this.FX[w];if(!f)return{error:'Largeur '+w+' m non supportée (P240).'};
     // Décomposition: N modules de 5m + 1 module spécial
@@ -733,8 +733,12 @@ const P240={
     addA('Piquet '+(p.piquetSize||'50')+' cm',piq50+Math.round(f.ptb/2)*4*pIn); // +plaques/pig×4 par pignon extra
     addA('Goupille L',gL);addA('Goupille Ferme',gFb+(sab==='oui'?Math.max(0,sabD+sabS-2):0));addA('Goupille Faîte',gFi);
     addA('Faîte',fai);addA('Pilier '+pt,pil);addA('Ferme '+w+' m ('+this.DIM.fm[w]+' mm)',fer);
-    addA('Tube 60×60 lumière',tL);addA('Tube 60×60',t6);addA('Tube 120×80 rainuré',t12);
+    if(lum==='avec'){addA('Tube 60×60 lumière',tL);addA('Ampoule',aT);} else {addA('Tube 60×60',t6+tL);}
+    if(lum==='avec')addA('Tube 60×60',t6);
+    addA('Tube 120×80 rainuré',t12);
     addA('Barre fermeture 4m',bf4);addA('Barre fermeture 5m',bf5);
+    // H4: rallonge 1m pour chaque barre de fermeture
+    if(H==='H4') addA('Rallonge barre fermeture 1m',bfT);
     if(sab==='oui'){addA('Sablière double',sabD);addA('Sablière simple',sabS);}
     if(blocs>0){addA('Bloc béton 500 kg',blocs);addA("Sangle d'arrimage",sangl);addA('Goupille L',blocs);}
     addA('Plaque câble Pilier (double)',pcP);addA('Plaque câble Faîte (simple)',pcF);
@@ -773,7 +777,8 @@ const P240={
       const t6sm=((sea==='hiver')?pm.s6h:pm.s6e)*tn;
       const t12sm=pm.t12*tn;
       // Tubes longueur spéciale du module
-      addA('Tube 60×60 lumière — '+lk+' m',tLsm);
+      if(lum==='avec') addA('Tube 60×60 lumière — '+lk+' m',tLsm);
+      else addA('Tube 60×60 — '+lk+' m',t6sm+tLsm);
       if(t6sm>0)  addA('Tube 60×60 — '+lk+' m',t6sm);
       addA('Tube 120×80 rainuré — '+lk+' m',t12sm);
       addA('Barre tension bâche '+lk+' m',tn);
@@ -916,7 +921,7 @@ const P334={
   },
   cblSets(N){return Math.ceil(N/3);},
   build(p){
-    const len=+(p.longueur||15),w=p.largeur334||'20.20',season=p.season||'ete';
+    const len=+(p.longueur||15),w=p.largeur334||'20.20',season=p.season||'ete',lum334=p.lumiere||'avec';
     const pIn=+p.pignonInter||0; // nombre de pignons intermédiaires
     const _pF334=(2+pIn)/2;       // facteur pignon fermeture/tubes
     // Décomposition automatique: N modules 5m + module spécial si reste
@@ -939,8 +944,13 @@ const P334={
     // ── Tube 120×80 lisse : base + bonus H6 (+2 par câble set) ──
     addA('Tube 120×80 lisse', d.lisse*N + (h334==='H6' ? 2*cs : 0));
     addA('Tube 120×80 rainuré',2*N);
-    if(season==='ete'){addA('Tube 60×60 lumière',d.lumEte*N);addA('Ampoule',d.lumEte*N);}
-    else{addA('Tube 60×60 lumière',d.lumHiv*N);addA('Tube 60×60',d.t60hiv*N);addA('Ampoule',d.lumHiv*N);}
+    if(season==='ete'){
+      if(lum334==='avec'){addA('Tube 60×60 lumière',d.lumEte*N);addA('Ampoule',d.lumEte*N);}
+      else{addA('Tube 60×60',d.lumEte*N);}
+    } else {
+      if(lum334==='avec'){addA('Tube 60×60 lumière',d.lumHiv*N);addA('Ampoule',d.lumHiv*N);addA('Tube 60×60',d.t60hiv*N);}
+      else{addA('Tube 60×60',d.lumHiv*N+d.t60hiv*N);}
+    }
     addA('Piquet '+(p.piquetSize||'50')+' cm',d.piquet50[0]+d.piquet50[1]*(N-1)+plaqPerPig*4*pIn); // +plaqPerPig×4 piquets par pignon extra
     addA('Barre tension petit',d.barTens[0]+d.barTens[1]*(N-1)+d.barTens[1]*pIn);
     // plaqPerPig defined above
@@ -1002,9 +1012,11 @@ const P334={
       Ar.push({name:'Tube 120×80 rainuré — '+lk+' m',qty:2});
       Ar.push({name:'Tube 120×80 lisse — '+lk+' m',qty:d.lisse});
       if(season==='ete'){
-        Ar.push({name:'Tube 60×60 lumière — '+lk+' m',qty:d.lumEte});
+        if(lum334==='avec') Ar.push({name:'Tube 60×60 lumière — '+lk+' m',qty:d.lumEte});
+        else Ar.push({name:'Tube 60×60 — '+lk+' m',qty:d.lumEte});
       } else {
-        Ar.push({name:'Tube 60×60 lumière — '+lk+' m',qty:d.lumHiv});
+        if(lum334==='avec') Ar.push({name:'Tube 60×60 lumière — '+lk+' m',qty:d.lumHiv});
+        else Ar.push({name:'Tube 60×60 — '+lk+' m',qty:d.lumHiv});
         Ar.push({name:'Tube 60×60 — '+lk+' m',qty:d.t60hiv});
       }
       Ar.push({name:'Barre tension bâche '+lk+' m',qty:d.barTens[1]||2});
