@@ -736,9 +736,9 @@ const P240={
     if(lum==='avec'){addA('Tube 60×60 lumière',tL);addA('Ampoule',aT);} else {addA('Tube 60×60',t6+tL);}
     if(lum==='avec')addA('Tube 60×60',t6);
     addA('Tube 120×80 rainuré',t12);
-    addA('Barre fermeture 4m',bf4);addA('Barre fermeture 5m',bf5);
-    // H4: rallonge 1m pour chaque barre de fermeture
-    if(H==='H4') addA('Rallonge barre fermeture 1m',bfT);
+    const bf4lbl = H==='H4' ? 'Barre fermeture 4m + rallonge 1m' : 'Barre fermeture 4m';
+    const bf5lbl = H==='H4' ? 'Barre fermeture 5m + rallonge 1m' : 'Barre fermeture 5m';
+    addA(bf4lbl,bf4);addA(bf5lbl,bf5);
     if(sab==='oui'){addA('Sablière double',sabD);addA('Sablière simple',sabS);}
     if(blocs>0){addA('Bloc béton 500 kg',blocs);addA("Sangle d'arrimage",sangl);addA('Goupille L',blocs);}
     addA('Plaque câble Pilier (double)',pcP);addA('Plaque câble Faîte (simple)',pcF);
