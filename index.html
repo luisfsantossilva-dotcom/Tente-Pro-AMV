@@ -738,7 +738,23 @@ const P240={
     addA('Tube 120×80 rainuré',t12);
     const bf4lbl = H==='H4' ? 'Barre fermeture 4m + rallonge 1m' : 'Barre fermeture 4m';
     const bf5lbl = H==='H4' ? 'Barre fermeture 5m + rallonge 1m' : 'Barre fermeture 5m';
-    addA(bf4lbl,bf4);addA(bf5lbl,bf5);
+    if(H==='H5'){
+      // Barres de fermeture P334 — hauteur calculée à chaque position (pente 20°, H5=5m)
+      // H(x) = 5 + x × tan(20°), seuil 7.3m: Petit ≤ 7.3m, Grand > 7.3m
+      // Positions par largeur: toutes à x=5m (Petit), 16/20/25m ont aussi x=8 ou 10m (Grand)
+      // BF intermédiaires: nb = (bf4+bf5) par pignon × nbre pignons
+      const nBFtot = bfT; // total barres par pignon × pignons déjà calculé
+      // Positions BF: toutes les largeurs ont x=5 (Petit); 16m a aussi x=8, 20/25m ont x=10
+      const hasBFgrand = (w===16||w===20||w===25);
+      // Répartition: chaque pignon a bf4+bf5 barres au total
+      // Pour largeurs avec 2 positions: moitié Petit (x=5) + moitié Grand (x=8 ou 10)
+      const nBFpetit = hasBFgrand ? Math.ceil(nBFtot/2) : nBFtot;
+      const nBFgrand = hasBFgrand ? Math.floor(nBFtot/2) : 0;
+      addA('Barre fermeture P334 Petit (≤7,3m)', nBFpetit);
+      if(nBFgrand>0) addA('Barre fermeture P334 Grand (>7,3m)', nBFgrand);
+    } else {
+      addA(bf4lbl,bf4);addA(bf5lbl,bf5);
+    }
     if(sab==='oui'){addA('Sablière double',sabD);addA('Sablière simple',sabS);}
     if(blocs>0){addA('Bloc béton 500 kg',blocs);addA("Sangle d'arrimage",sangl);addA('Goupille L',blocs);}
     addA('Plaque câble Pilier (double)',pcP);addA('Plaque câble Faîte (simple)',pcF);
