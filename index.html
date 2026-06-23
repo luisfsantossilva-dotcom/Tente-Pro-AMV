@@ -8275,10 +8275,11 @@ function commandeGantt(){
    MODULE PLANCHER
 ══════════════════════════════════════ */
 const PLANCHER = {
-  // ── Tubes disponibles (valables pour toutes familles de panneaux) ─
-  // Tube sol : 3m, 4m, 5m, 6m, 8m (longueurs standards en stock)
-  // Pour panneau 0.85m on ajoute 4.25m (5×0.85) et 5.95m (7×0.85) et 8.5m (10×0.85)
-  TUBES_STD: [300, 400, 425, 500, 595, 600, 800, 850], // en cm
+  // ── Tubes par famille de panneaux ──────────────────────────────────
+  // Pan 0,85m → 4,25m (5×0,85) / 5,95m (7×0,85) / 8,5m (10×0,85)
+  // Pan 1,0m et 0,5m → 3m / 4m / 5m / 6m / 8m
+  TUBES_085: [425, 595, 850],
+  TUBES_STD: [300, 400, 500, 600, 800],
 
   // ── DP : combinaison minimale de tubes ≥ W ───────────────────────
   bestCombo(W, pan) {
@@ -8288,8 +8289,9 @@ const PLANCHER = {
     const dp  = new Array(N).fill(INF);
     const par = new Array(N).fill(0);
     dp[0] = 0;
+    const tubeList = (pan === '0.85') ? this.TUBES_085 : this.TUBES_STD;
     for (let a = 1; a < N; a++) {
-      for (const t of this.TUBES_STD) {
+      for (const t of tubeList) {
         if (t <= a && dp[a - t] + 1 < dp[a]) { dp[a] = dp[a - t] + 1; par[a] = t; }
       }
     }
@@ -8316,9 +8318,9 @@ const PLANCHER = {
   // ── Nom du tube selon famille de panneaux ────────────────────────
   tubeName(tLen, pan) {
     const tk = tLen.toString().replace('.', ',') + 'm';
-    if (pan === '0.85') return 'Tube sol 0,85 — ' + tk;
-    if (pan === '0.5')  return 'Tube sol 0,5 — '  + tk;
-    return 'Tube sol 1,0 — ' + tk;
+    if (pan === '0.85') return 'Tube sol 0,85m — ' + tk;
+    if (pan === '0.5')  return 'Tube sol 0,5m — '  + tk;
+    return 'Tube sol 1,0m — ' + tk;
   },
 
   build(p) {
