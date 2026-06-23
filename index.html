@@ -982,9 +982,9 @@ const P334={
     if(d.t120s)addA('Tube 120×80 sans pipo pignon',Math.round(d.t120s*_pF334));
     // Pignon structural tubes: 2 pignons standard + pIn intermédiaires
     addA('Tube 120×80 pignon coupe droite',2+pIn);addA('Tube 120×80 pignons coupe gauche',2+pIn);
-    if(d.tr5a)addA('Tube rond 5m avec pipo',d.tr5a*(1+pIn/2));
-    if(d.tr5s)addA('Tube rond 5m sans pipo',d.tr5s*(1+pIn/2));
-    if(d.tr2a)addA('Tube rond 2m avec pipo',d.tr2a*(1+pIn/2));
+    if(d.tr5a)addA('Tube rond 5m avec pipo',Math.round(d.tr5a*(2+pIn)));
+    if(d.tr5s)addA('Tube rond 5m sans pipo',Math.round(d.tr5s*(2+pIn)));
+    if(d.tr2a)addA('Tube rond 2m avec pipo',Math.round(d.tr2a*(2+pIn)));
     // ── PLAQUES CÂBLE — varient selon hauteur H4/H6 ──
     addA('Plaque câble Gauche',2*cs);
     addA('Plaque câble Droite',2*cs);
@@ -1138,11 +1138,18 @@ const PDANSE={
     let ferm2m, ferm1m;
     if(remL===0){
       ferm2m = 3*nW2*nL + nW2 + nL;
-      ferm1m = 0;
+      // W impair → colonne extra 1m le long de L → nL fermettes 1m
+      ferm1m = remW ? nL : 0;
     } else {
       const f2_even = 3*nW2*nL + nW2 + nL;
       ferm2m = f2_even + nW2 + (L===1 ? 1 : 0);
-      ferm1m = (L===1) ? W : (W+1);
+      if(!remW){
+        // W pair, L impair
+        ferm1m = (L===1) ? W : (W+1);
+      } else {
+        // W impair ET L impair → contribution des deux côtés
+        ferm1m = nL + nW2;
+      }
     }
     if(renfort){
       const extra_renfort = (remL===0) ? nL*(W/2+1) : (nL+1)*(W/2+1);
@@ -3626,7 +3633,10 @@ function bonPreparation(){
     const idx=_rowIdx++;
     return `<tr id="bpr-${sec}-${idx}">
       <td class="nom">${esc(name)}</td>
-      <td class="qty"><input type="number" value="${qty}" min="0" style="width:36px;text-align:center;border:1px solid #cbd5e1;border-radius:4px;padding:1px 3px;font-size:9pt;font-weight:700;color:#b91c1c;background:#fff;font-family:inherit" onchange="this.closest('tr').style.background=this.value=='${qty}'?'':'#fffbeb'" /></td>
+      <td class="qty">
+        <span class="qty-print" style="font-weight:700;color:#b91c1c;display:none">${qty}</span>
+        <input type="number" value="${qty}" min="0" style="width:52px;text-align:center;border:1px solid #cbd5e1;border-radius:4px;padding:1px 3px;font-size:9pt;font-weight:700;color:#b91c1c;background:#fff;font-family:inherit" onchange="this.closest('tr').style.background=this.value=='${qty}'?'':'#fffbeb'" />
+      </td>
       <td class="chk"><input type="checkbox" style="width:14px;height:14px;cursor:pointer;accent-color:#b91c1c" /></td>
       <td class="obs"><input type="text" placeholder="Obs." style="width:100%;border:none;border-bottom:1px solid #e2e8f0;font-size:8pt;color:#64748b;background:transparent;font-family:inherit" /></td>
     </tr>`;
@@ -3682,6 +3692,11 @@ body{font-family:'Nunito','Segoe UI',Arial,sans-serif;font-size:9.5pt;color:#1e2
   table{page-break-inside:auto}
   tr{page-break-inside:avoid}
   .sec-block{page-break-inside:avoid}
+  td.qty input{display:none!important}
+  td.qty .qty-print{display:inline!important}
+  td.obs input{display:none!important}
+  td.chk input{display:none!important}
+  td.chk::after{content:'☐';font-size:11pt;color:#94a3b8}
 }
 /* HEADER */
 .hdr{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #b91c1c;padding-bottom:4px;margin-bottom:5px}
