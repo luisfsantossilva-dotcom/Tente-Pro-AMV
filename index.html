@@ -715,10 +715,10 @@ const P240={
     const r2T=Math.round(f.r2p*_rpF);
     const r3T=Math.round(f.r3p*_rpF);
     const bT=N*tn;
-    const ten5=Math.round(f.t5*_rpF + 2*N*tn + f.ptb*_pF); // latéraux + pignons (ptb = barres tension bâche par pignon)
+    const _pF=(2+pIn)*tn; // pignon factor
+    const ten5=Math.round(f.t5*_rpF + 2*N*tn + f.ptb*_pF); // latéraux + pignons
     const ten2=Math.round(f.t2p*_rpF);
     const ten3=Math.round(f.t3p*_rpF);
-    const _pF=(2+pIn)*tn; // pignon factor
     // ptT: ptb par pignon × nb pignons + 2 par module supplémentaire
     const ptT=Math.round(f.ptb*(2+pIn)*tn + 2*(N-1)*tn);
     const t12p=Math.round(f.tp12p*_pF);const t12s=Math.round(f.tp12s*_pF);
