@@ -280,19 +280,20 @@ body.show-liv .liv-block{display:block;margin-top:16px;}
   </div>
   <div class="hdr-company" id="company-display">Constructeur du Modulaire</div>
   <div class="hdr-sep"></div>
-  <div class="prof-tabs">
-    <div class="ptab" data-profile="commande" onclick="switchProfile('commande',this)">Chantiers</div>
-    <div class="ptab active" data-profile="p93" onclick="switchProfile('p93',this)">P93/50</div>
-    <div class="ptab" data-profile="lp" onclick="switchProfile('lp',this)">LP</div>
-    <div class="ptab" data-profile="p240" onclick="switchProfile('p240',this)">P240</div>
-    <div class="ptab" data-profile="p334" onclick="switchProfile('p334',this)">P334</div>
-    <div class="ptab" data-profile="pontdanse" onclick="switchProfile('pontdanse',this)">Pont-danse</div>
-    <div class="ptab" data-profile="pagode" onclick="switchProfile('pagode',this)">Pagode</div>
-    <div class="ptab" data-profile="plancher" onclick="switchProfile('plancher',this)">Plancher</div>
-    <div class="ptab" data-profile="container" onclick="switchProfile('container',this)">Container</div>
-    <div class="ptab" data-profile="stock" onclick="switchProfile('stock',this)">Stock</div>
-    <div class="ptab" data-profile="chauffage" onclick="switchProfile('chauffage',this)">Chauffage</div>
-    <div class="ptab" data-profile="mobilier" onclick="switchProfile('mobilier',this)">Mobilier</div>
+  <div class="prof-tabs" id="prof-tabs-bar">
+    <div class="ptab" data-profile="commande">Chantiers</div>
+    <div class="ptab active" data-profile="p93">P93/50</div>
+    <div class="ptab" data-profile="lp">LP</div>
+    <div class="ptab" data-profile="p240">P240</div>
+    <div class="ptab" data-profile="p334">P334</div>
+    <div class="ptab" data-profile="pontdanse">Pont-danse</div>
+    <div class="ptab" data-profile="pagode">Pagode</div>
+    <div class="ptab" data-profile="plancher">Plancher</div>
+    <div class="ptab" data-profile="container">Container</div>
+    <div class="ptab" data-profile="stock">Stock</div>
+    <div class="ptab" data-profile="chauffage">Chauffage</div>
+    <div class="ptab" data-profile="mobilier">Mobilier</div>
+    <div class="ptab" data-profile="planning">Planning</div>
   </div>
   <div class="hdr-right" style="gap:2px;">
     <span id="sync-status" style="display:none"></span>
@@ -2836,6 +2837,36 @@ function switchProfile(prof, tabEl){
   const sp2=document.getElementById('stock-right-panel'); if(sp2){sp2.style.display='none';sp2.innerHTML='';}
   const pgp2=document.getElementById('pagode-right-panel'); if(pgp2){pgp2.style.display='none';pgp2.innerHTML='';}
   const plp2=document.getElementById('plancher-right-panel'); if(plp2){plp2.style.display='none';plp2.innerHTML='';}
+  const plnp=document.getElementById('planning-right-panel'); if(plnp)plnp.style.display='none';
+  if(prof==='planning'){
+    const rg=document.querySelector('.rg'); if(rg)rg.style.display='none';
+    const vw=document.getElementById('viz-wrap'); if(vw)vw.style.display='none';
+    const eb=$('err'); if(eb){eb.textContent='';eb.className='err';}
+    ['cont-right-panel','cmd-right-panel','stock-right-panel','pagode-right-panel',
+     'plancher-right-panel','chauf-right-panel','mob-right-panel'].forEach(id=>{
+      const el=document.getElementById(id); if(el){el.style.display='none';el.innerHTML='';}
+    });
+    document.querySelectorAll('.rc').forEach(e=>e.style.display='none');
+    const cvm=document.getElementById('chantier-view'); if(cvm)cvm.style.display='none';
+    const hdr2=document.querySelector('.hdr-right'); if(hdr2)hdr2.style.display='none';
+    const sr=$('sec-rideaux'); if(sr)sr.style.display='none';
+    let pp=document.getElementById('planning-right-panel');
+    if(!pp){
+      const right=document.querySelector('.right');
+      if(right){
+        pp=document.createElement('div');
+        pp.id='planning-right-panel';
+        pp.style.cssText='padding:0;overflow-y:auto;height:100%;';
+        right.appendChild(pp);
+      }
+    }
+    if(pp){
+      pp.style.display='block';
+      pp.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">⏳ Chargement du planning…</div>';
+    }
+    setTimeout(renderPlanning,80);
+    return;
+  }
   if(prof==='pagode'){
     const eb=$('err'); if(eb){eb.textContent='';eb.className='err';}
     const cp=document.getElementById('cont-right-panel'); if(cp){cp.style.display='none';cp.innerHTML='';}
@@ -4900,6 +4931,376 @@ const _origAutoCalc = autoCalc;
 /* ══════════════════════════════════════
    MODULE CHAUFFAGE
 ══════════════════════════════════════ */
+
+/* ════════════════════════════════════════════════════
+   PLANNING — Gantt + Analyse de transfert de matériel
+════════════════════════════════════════════════════ */
+(function(){
+
+const PROF_C={p93:'#2a78d6',lp:'#1baf7a',p240:'#4a3aa7',p334:'#e34948',pontdanse:'#eda100',pagode:'#e87ba4',plancher:'#7c5c3b'};
+const PROF_L={p93:'P93/50',lp:'LP',p240:'P240',p334:'P334',pontdanse:'Pont-danse',pagode:'Pagode',plancher:'Plancher'};
+let _pl_chantiers=[], _pl_sel=[], _pl_delai=48, _pl_pairs=[], _pl_activePair=-1, _pl_intervalle=30;
+
+function _pd(s){ return s?new Date(s+'T00:00:00'):null; }
+function _status(ch){
+  const o=_pd(ch.out),i=_pd(ch.in),T=new Date();
+  if(!o||!i) return 'upcoming';
+  if(T>i) return 'past'; if(T>=o) return 'current'; return 'upcoming';
+}
+
+function _calcBOM(sn, profil){
+  const bom={};
+  const add=(n,q)=>{if(n&&q>0)bom[n]=(bom[n]||0)+q;};
+  try{
+    let res=null;
+    if(profil==='p93') res=P93.build(sn);
+    else if(profil==='p240') res=P240.build(sn);
+    else if(profil==='lp') res=LP.build(sn);
+    else if(profil==='p334') res=P334.build(sn);
+    else if(profil==='pontdanse') res=PDANSE.build(sn);
+    else if(profil==='pagode') res=PAGODE.build({pagodeSz:+(sn.pagodeSz||3),pagodeNb:+(sn.pagodeNb||1),lumiere:sn.lumiere||'avec'});
+    else if(profil==='plancher') res=PLANCHER.build(sn);
+    if(res&&!res.error){
+      (res.A||[]).forEach(r=>{if(r.qty>0){const q=(sn.overrides&&sn.overrides[r.name]!==undefined)?sn.overrides[r.name]:r.qty;add(r.name,q);}});
+      (res.B||[]).forEach(r=>{if(r.qty>0)add(r.name,r.qty);});
+      (sn._extraA||[]).forEach(r=>{if(r.name&&r.qty>0)add(r.name,r.qty);});
+      (sn._extraB||[]).forEach(r=>{if(r.name&&r.qty>0)add(r.name,r.qty);});
+    }
+  }catch(e){}
+  return bom;
+}
+
+function _bomByProfil(ch){
+  const byP={};
+  (ch.configs||[]).forEach(cfg=>{
+    if(!cfg||!cfg.snap||cfg.type==='mobilier') return;
+    let sn={};
+    try{sn=JSON.parse(cfg.snap);}catch(e){return;}
+    const pr=cfg.type;
+    const bom=_calcBOM(sn,pr);
+    if(!Object.keys(bom).length) return;
+    if(!byP[pr]) byP[pr]={};
+    Object.entries(bom).forEach(([k,v])=>{byP[pr][k]=(byP[pr][k]||0)+v;});
+  });
+  return byP;
+}
+
+function _diffH(src,dst){
+  const r=_pd(src.in),d=_pd(dst.out);
+  if(!r||!d) return null;
+  return Math.round((d-r)/3600000);
+}
+
+function _detectPairs(){
+  const sorted=[..._pl_chantiers].filter(c=>c.out&&c.in).sort((a,b)=>_pd(a.out)-_pd(b.out));
+  const pairs=[];
+  for(let i=0;i<sorted.length;i++){
+    for(let j=0;j<sorted.length;j++){
+      if(i===j) continue;
+      const src=sorted[i],dst=sorted[j];
+      const dh=_diffH(src,dst);
+      if(dh===null) continue;
+      if(dh>=0&&dh<=_pl_intervalle*24) pairs.push({src,dst,dh,ok:dh>=_pl_delai});
+    }
+  }
+  return pairs;
+}
+
+function _esc(s){ return esc(s); }
+
+window.renderPlanning=function(){
+  const pp=document.getElementById('planning-right-panel');
+  if(!pp) return;
+  _pl_chantiers=[...CH_DATA];
+  _pl_pairs=_detectPairs();
+  _render();
+};
+
+function _render(){
+  const pp=document.getElementById('planning-right-panel');
+  if(!pp) return;
+
+  const CSS=`<style>
+  #pl-wrap{padding:16px 20px;font-family:var(--font);font-size:13px;color:var(--text)}
+  #pl-wrap .pl-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  #pl-wrap .pl-sec{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin:14px 0 6px}
+  #pl-wrap .pl-gantt{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg2)}
+  #pl-wrap .pl-g-hdr{display:flex;background:var(--bg3);border-bottom:1px solid var(--border)}
+  #pl-wrap .pl-g-name-col{width:190px;min-width:190px;padding:6px 12px;font-size:11px;color:var(--text3);border-right:1px solid var(--border)}
+  #pl-wrap .pl-g-track-hdr{flex:1;position:relative;height:28px}
+  #pl-wrap .pl-g-row{display:flex;border-bottom:1px solid var(--border);min-height:44px;align-items:stretch;cursor:pointer}
+  #pl-wrap .pl-g-row:last-child{border-bottom:none}
+  #pl-wrap .pl-g-row:hover{background:var(--bg3)}
+  #pl-wrap .pl-g-nm{width:190px;min-width:190px;padding:5px 12px;border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;gap:2px}
+  #pl-wrap .pl-g-nm .n{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #pl-wrap .pl-g-nm .s{font-size:10px;color:var(--text3)}
+  #pl-wrap .pl-g-track{flex:1;position:relative}
+  #pl-wrap .pl-bar{position:absolute;top:7px;height:30px;border-radius:5px;display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;transition:opacity .12s}
+  #pl-wrap .pl-bar:hover{opacity:.82}
+  #pl-wrap .pl-bar.past{background:#b4b2a9;color:#2c2c2a}
+  #pl-wrap .pl-bar.current{background:#2a78d6;color:#fff}
+  #pl-wrap .pl-bar.upcoming{background:#1baf7a;color:#fff}
+  #pl-wrap .pl-bar.sel{box-shadow:0 0 0 2.5px var(--text)}
+  #pl-wrap .pl-today{position:absolute;top:0;bottom:0;width:2px;background:#e34948;opacity:.7;z-index:3;pointer-events:none}
+  #pl-wrap .pl-tick-l{position:absolute;font-size:10px;color:var(--text3);top:3px;transform:translateX(-50%)}
+  #pl-wrap .pl-tick-v{position:absolute;top:0;bottom:0;width:0.5px;background:var(--border)}
+  #pl-wrap .pl-leg{display:flex;gap:12px;font-size:11px;color:var(--text2);flex-wrap:wrap}
+  #pl-wrap .pl-leg span{display:flex;align-items:center;gap:4px}
+  #pl-wrap .pl-sq{width:10px;height:10px;border-radius:2px;display:inline-block}
+  #pl-wrap .pl-pairs{display:flex;gap:6px;flex-wrap:wrap}
+  #pl-wrap .pl-pair-btn{font-size:11px;padding:3px 9px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;color:var(--text2);font-family:var(--font)}
+  #pl-wrap .pl-pair-btn:hover{background:var(--bg2);color:var(--text)}
+  #pl-wrap .pl-pair-btn.active{background:#dbeafe;color:#1e40af;border-color:#93c5fd}
+  #pl-wrap .pl-hint{font-size:12px;color:var(--text3);text-align:center;padding:1.5rem;border-radius:8px;border:1px dashed var(--border);background:var(--bg3)}
+  #pl-wrap .pl-card{border:1px solid var(--border);border-radius:8px;background:var(--bg2);overflow:hidden}
+  #pl-wrap .pl-card-hdr{padding:9px 14px;border-bottom:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  #pl-wrap .pl-kpi-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  #pl-wrap .pl-kpi{background:var(--bg3);border-radius:6px;padding:8px 10px}
+  #pl-wrap .pl-kpi .l{font-size:10px;color:var(--text3);margin-bottom:1px}
+  #pl-wrap .pl-kpi .v{font-size:18px;font-weight:700}
+  #pl-wrap .pl-prof-hdr{padding:6px 14px;font-size:11px;font-weight:700;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+  #pl-wrap .pl-prof-block{border-bottom:1px solid var(--border)}
+  #pl-wrap .pl-prof-block:last-child{border-bottom:none}
+  #pl-wrap .pl-tbl{width:100%;border-collapse:collapse;font-size:12px}
+  #pl-wrap .pl-tbl th{font-size:10px;font-weight:700;color:var(--text3);padding:4px 10px;text-align:right;border-bottom:1px solid var(--border)}
+  #pl-wrap .pl-tbl th:first-child{text-align:left}
+  #pl-wrap .pl-tbl td{padding:4px 10px;text-align:right;border-bottom:1px solid var(--border);color:var(--text)}
+  #pl-wrap .pl-tbl td:first-child{text-align:left;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #pl-wrap .pl-tbl tr:last-child td{border-bottom:none}
+  #pl-wrap .pl-tbl tbody tr:nth-child(even){background:var(--bg3)}
+  #pl-wrap .c-ok{color:#16a34a;font-weight:700}
+  #pl-wrap .c-pt{color:#d97706;font-weight:700}
+  #pl-wrap .c-er{color:#dc2626;font-weight:700}
+  #pl-wrap .c-mu{color:var(--text3)}
+  #pl-wrap .bdg{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700}
+  #pl-wrap .b-ok{background:#dcfce7;color:#166534}
+  #pl-wrap .b-wa{background:#fef3c7;color:#92400e}
+  #pl-wrap .b-er{background:#fee2e2;color:#991b1b}
+  </style>`;
+
+  pp.innerHTML=CSS+`<div id="pl-wrap">
+  <div class="pl-toolbar">
+    <label style="color:var(--text2);font-size:12px">Délai min. :</label>
+    <input type="range" min="0" max="120" value="${_pl_delai}" step="12" id="pl-sl" style="width:80px">
+    <span id="pl-sl-v" style="font-weight:700;min-width:32px;font-size:12px">${_pl_delai}h</span>
+    <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
+    <label style="color:var(--text2);font-size:12px">Intervalle :</label>
+    <input type="range" min="7" max="120" value="${_pl_intervalle}" step="7" id="pl-int" style="width:80px">
+    <span id="pl-int-v" style="font-weight:700;min-width:42px;font-size:12px">${_pl_intervalle}j</span>
+    <div style="flex:1"></div>
+    <div class="pl-leg">
+      <span><span class="pl-sq" style="background:#b4b2a9"></span>Passé</span>
+      <span><span class="pl-sq" style="background:#2a78d6"></span>En cours</span>
+      <span><span class="pl-sq" style="background:#1baf7a"></span>À venir</span>
+      <span><span class="pl-sq" style="background:#e34948;border-radius:50%"></span>Aujourd'hui</span>
+    </div>
+  </div>
+  <div class="pl-sec">Calendrier — cliquer pour sélectionner</div>
+  <div class="pl-gantt" id="pl-gantt"></div>
+  <div id="pl-auto-pairs-section"></div>
+  <div id="pl-transfer-section"></div>
+  </div>`;
+
+  document.getElementById('pl-sl').addEventListener('input',function(){
+    _pl_delai=+this.value;
+    document.getElementById('pl-sl-v').textContent=_pl_delai+'h';
+    _pl_pairs=_detectPairs();
+    _renderPairs();
+    _renderTransfer();
+  });
+
+  document.getElementById('pl-int').addEventListener('input',function(){
+    _pl_intervalle=+this.value;
+    document.getElementById('pl-int-v').textContent=_pl_intervalle+'j';
+    _pl_pairs=_detectPairs();
+    _renderPairs();
+  });
+
+  _renderGantt();
+  _renderPairs();
+}
+
+function _renderGantt(){
+  const el=document.getElementById('pl-gantt');
+  if(!el) return;
+  const withD=_pl_chantiers.filter(c=>c.out&&c.in);
+  if(!withD.length){el.innerHTML='<div style="padding:1rem;text-align:center;color:var(--text3)">Aucun chantier avec dates.</div>';return;}
+
+  const allD=withD.flatMap(c=>[_pd(c.out),_pd(c.in)]);
+  const minD=new Date(Math.min(...allD)-7*864e5);
+  const maxD=new Date(Math.max(...allD)+7*864e5);
+  const span=maxD-minD;
+  const p=d=>Math.max(0,Math.min(100,(d-minD)/span*100));
+  const T=new Date(), todayP=p(T);
+
+  // Header
+  let hdr=`<div class="pl-g-hdr"><div class="pl-g-name-col">Chantier</div><div class="pl-g-track-hdr" id="pl-g-hdr-track"></div></div>`;
+  let rowsHTML='';
+  const sorted=[...withD].sort((a,b)=>_pd(a.out)-_pd(b.out));
+  sorted.forEach(ch=>{
+    const profils=[...new Set((ch.configs||[]).map(c=>c.type).filter(t=>t&&t!=='mobilier'))];
+    const prDots=profils.map(pr=>`<span style="color:${PROF_C[pr]||'#888'}">${PROF_L[pr]||pr}</span>`).join(' ');
+    const lp=p(_pd(ch.out)),rp=p(_pd(ch.in));
+    const dur=Math.round((_pd(ch.in)-_pd(ch.out))/864e5);
+    const nEns=(ch.configs||[]).filter(c=>c.type&&c.type!=='mobilier').length;
+    const isSel=_pl_sel.includes(ch.id)?'sel':'';
+    rowsHTML+=`<div class="pl-g-row" onclick="window._pl_toggleSel('${ch.id}')">
+      <div class="pl-g-nm">
+        <div class="n" title="${_esc(ch.nom)}">${_esc(ch.nom)}</div>
+        <div class="s">${_esc(ch.client||'')}${profils.length?' · '+prDots:''}</div>
+      </div>
+      <div class="pl-g-track">
+        <div class="pl-today" style="left:${todayP}%"></div>
+        <div class="pl-bar ${_status(ch)} ${isSel}" style="left:${lp}%;width:${Math.max(rp-lp,.5)}%"
+          title="${_esc(ch.nom)} : ${ch.out} → ${ch.in}">${dur}j${nEns?' · '+nEns+' ens.':''}</div>
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML=hdr+rowsHTML;
+
+  // Ticks dans le header
+  const trackHdr=document.getElementById('pl-g-hdr-track');
+  if(trackHdr){
+    trackHdr.innerHTML=`<div class="pl-today" style="left:${todayP}%"></div>`;
+    let cur=new Date(minD.getFullYear(),minD.getMonth(),1);
+    while(cur<=maxD){
+      const lp=p(cur);
+      trackHdr.innerHTML+=`<div class="pl-tick-v" style="left:${lp}%"></div>
+        <div class="pl-tick-l" style="left:${lp}%">${cur.toLocaleDateString('fr-CH',{month:'short',day:'numeric'})}</div>`;
+      cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);
+    }
+  }
+}
+
+window._pl_toggleSel=function(id){
+  const i=_pl_sel.indexOf(id);
+  if(i>=0) _pl_sel.splice(i,1);
+  else{if(_pl_sel.length>=2)_pl_sel.shift();_pl_sel.push(id);}
+  _pl_activePair=-1;
+  _renderGantt();
+  _renderPairs();
+  _renderTransfer();
+};
+
+function _renderPairs(){
+  const sec=document.getElementById('pl-auto-pairs-section');
+  if(!sec) return;
+  if(!_pl_pairs.length){sec.innerHTML='';return;}
+  let html=`<div class="pl-sec">Transferts possibles détectés automatiquement</div><div class="pl-pairs">`;
+  _pl_pairs.forEach((pair,idx)=>{
+    const icon=pair.ok?'✓':'⚠';
+    const active=idx===_pl_activePair?' active':'';
+    html+=`<button class="pl-pair-btn${active}" onclick="window._pl_selectPair(${idx})">${icon} ${_esc(pair.src.nom)} → ${_esc(pair.dst.nom)} (${pair.dh}h)</button>`;
+  });
+  html+='</div>';
+  sec.innerHTML=html;
+}
+
+window._pl_selectPair=function(idx){
+  _pl_activePair=idx;
+  const pair=_pl_pairs[idx];
+  _pl_sel=[pair.src.id,pair.dst.id];
+  _renderGantt();
+  _renderPairs();
+  _renderTransfer();
+};
+
+function _renderTransfer(){
+  const sec=document.getElementById('pl-transfer-section');
+  if(!sec) return;
+  if(_pl_sel.length<2){
+    sec.innerHTML=`<div class="pl-sec">Analyse de transfert</div><div class="pl-hint">Sélectionne 2 chantiers sur le Gantt ou clique sur un transfert détecté ci-dessus.</div>`;
+    return;
+  }
+  const chA=_pl_chantiers.find(c=>c.id===_pl_sel[0]);
+  const chB=_pl_chantiers.find(c=>c.id===_pl_sel[1]);
+  if(!chA||!chB){sec.innerHTML='';return;}
+
+  let src,dst;
+  const dA=_pd(chA.in),dB=_pd(chB.in);
+  if(dA&&dB&&dA<=dB){src=chA;dst=chB;} else {src=chB;dst=chA;}
+
+  const dh=_diffH(src,dst);
+  const delaiOk=dh!==null&&dh>=_pl_delai;
+
+  const srcByP=_bomByProfil(src);
+  const dstByP=_bomByProfil(dst);
+  const allProfs=[...new Set([...Object.keys(srcByP),...Object.keys(dstByP)])];
+
+  let totalNeed=0,totalTransf=0,totalManque=0;
+  const profRes=[];
+  allProfs.forEach(pr=>{
+    const sB=srcByP[pr]||{};
+    const dB=dstByP[pr]||{};
+    if(!Object.keys(dB).length) return;
+    const items=[];
+    let profOk=true;
+    Object.entries(dB).forEach(([nom,need])=>{
+      totalNeed+=need;
+      const avail=sB[nom]||0;
+      const transf=Math.min(need,avail);
+      const manque=Math.max(0,need-transf);
+      const exced=Math.max(0,avail-need);
+      totalTransf+=transf;
+      if(manque>0){totalManque+=manque;profOk=false;}
+      items.push({nom,need,avail,transf,manque,exced});
+    });
+    Object.entries(sB).forEach(([nom,avail])=>{
+      if(!dB[nom]&&avail>0) items.push({nom,need:0,avail,transf:0,manque:0,exced:avail,extra:true});
+    });
+    profRes.push({pr,items,profOk});
+  });
+
+  const pctT=totalNeed>0?Math.round(totalTransf/totalNeed*100):0;
+  const dhLabel=dh===null?'—':dh<0?'Chevauchement':dh+'h';
+
+  let html=`<div class="pl-sec">Analyse — ${_esc(src.nom)} → ${_esc(dst.nom)}</div>
+  <div class="pl-card">
+    <div class="pl-card-hdr">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">${_esc(src.nom)} <span style="color:var(--text3);font-weight:400">→</span> ${_esc(dst.nom)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:1px">Retour ${src.in||'?'} · Début montage ${dst.out||'?'}</div>
+      </div>
+      <span class="bdg ${delaiOk?'b-ok':dh!==null&&dh<0?'b-er':'b-wa'}">${dhLabel} ${delaiOk?'✓':'⚠'}</span>
+    </div>
+    ${!delaiOk&&dh!==null?`<div style="padding:7px 14px;background:#fef3c7;font-size:11px;color:#92400e;border-bottom:1px solid var(--border)">
+      Délai de ${dh}h insuffisant (min. ${_pl_delai}h requis).</div>`:''}
+    <div class="pl-kpi-row">
+      <div class="pl-kpi"><div class="l">Transférable</div><div class="v">${pctT}%</div></div>
+      <div class="pl-kpi"><div class="l">Pièces transf.</div><div class="v">${totalTransf}/${totalNeed}</div></div>
+      <div class="pl-kpi"><div class="l">Manque dépôt</div><div class="v" style="color:${totalManque>0?'#dc2626':'#16a34a'}">${totalManque}</div></div>
+      <div class="pl-kpi"><div class="l">Profils OK</div><div class="v">${profRes.filter(p=>p.profOk).length}/${profRes.length}</div></div>
+    </div>
+    ${profRes.length===0?`<div style="padding:1rem 14px;font-size:12px;color:var(--text3)">Aucune configuration calculable dans ces chantiers.</div>`:''}
+    ${profRes.map(({pr,items,profOk})=>`
+    <div class="pl-prof-block">
+      <div class="pl-prof-hdr">
+        <div style="width:8px;height:8px;border-radius:2px;background:${PROF_C[pr]||'#888'}"></div>
+        <span style="color:${PROF_C[pr]||'#888'}">${PROF_L[pr]||pr}</span>
+        <span class="bdg ${profOk?'b-ok':'b-wa'}" style="margin-left:auto">${profOk?'Transfert complet':'Manque en dépôt'}</span>
+      </div>
+      <table class="pl-tbl">
+        <thead><tr><th>Pièce</th><th>Besoin</th><th>Disponible</th><th>Transférable</th><th>Manque</th><th>Excédent</th></tr></thead>
+        <tbody>
+        ${items.filter(i=>!i.extra).map(it=>`<tr>
+          <td title="${_esc(it.nom)}">${_esc(it.nom)}</td>
+          <td>${it.need}</td><td>${it.avail}</td>
+          <td class="${it.transf>=it.need?'c-ok':it.transf>0?'c-pt':'c-er'}">${it.transf}</td>
+          <td class="${it.manque>0?'c-er':'c-mu'}">${it.manque||'—'}</td>
+          <td class="c-mu">${it.exced||'—'}</td>
+        </tr>`).join('')}
+        ${items.filter(i=>i.extra).length?`<tr><td colspan="6" style="font-size:10px;color:var(--text3);font-style:italic;padding:3px 10px">
+          Excédents : ${items.filter(i=>i.extra).map(e=>_esc(e.nom)+' ×'+e.exced).join(' · ')}
+        </td></tr>`:''}
+        </tbody>
+      </table>
+    </div>`).join('')}
+  </div>`;
+  sec.innerHTML=html;
+}
+
+})(); // end IIFE planning
 
 function renderChauffage(){
   const view = S.chaufView||'stock';
@@ -9749,6 +10150,12 @@ async function initSupabase(){
 
 restorePersisted();
 initSupabase();
+
+// Event delegation pour les tabs profil (évite les onclick inline)
+document.getElementById('prof-tabs-bar').addEventListener('click',function(e){
+  const tab=e.target.closest('.ptab');
+  if(tab&&tab.dataset.profile) switchProfile(tab.dataset.profile,tab);
+});
 
 switchProfile('commande', document.querySelector('.ptab[data-profile="commande"]'));
 setTimeout(renderChantierGlobal,200);
