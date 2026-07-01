@@ -3589,10 +3589,12 @@ function _uniTableAB(w, A, B, mode, showDispo, dateOut, dateBack){
 
 /* ── Impression calculateurs (modes A / B / AB / BON / LIV) ── */
 function bonPreparation(){
-  // Si on est sur une tab non-calculateur (Chantiers, Mobilier, Stock, Chauffage)
-  // et qu'un chantier est actif → générer le bon de prép du chantier entier
+  // Si le tab Chantiers est actif (ou profil non-calculateur) et qu'un chantier est sélectionné
+  // → générer le bon de prép du chantier entier
   const _CALC=['p93','lp','p240','p334','pontdanse','pagode','plancher','container'];
-  if(!_CALC.includes(S.profile) && typeof chGetActive==='function' && chGetActive() && typeof bonPreparationChantier==='function'){
+  const chantierTabActive = document.getElementById('chantier-view')?.style.display !== 'none'
+    || document.querySelector('.ptab[data-profile="commande"]')?.classList.contains('active');
+  if((chantierTabActive || !_CALC.includes(S.profile)) && typeof chGetActive==='function' && chGetActive() && typeof bonPreparationChantier==='function'){
     return bonPreparationChantier();
   }
   if(!LAST) autoCalc();
@@ -6036,7 +6038,7 @@ function printFichePrepa(){
   const mobilier  = d.mobilier  || {};
   const fleet     = contGetFleet();
   const chaufStock= chaufGetStock();
-  const mobStock  = mobGetStock();
+  const mobStock  = (typeof mobGetStockLocal==='function') ? mobGetStockLocal() : [];
 
   const client   = document.getElementById('client')?.value  || d.client   || '—';
   const chantier = document.getElementById('chantier')?.value|| d.chantier || '—';
@@ -6582,8 +6584,9 @@ function bonPreparationChantier(){
   if(!tentes.length) tentes = d.tentes||[];
   const containers = d.containers||[];
   const chauffage = d.chauffage||[];
-  const mobilier = d.mobilier||{};
-  const mobStock = mobGetStock();
+  // Mobilier: depuis le chantier actif (via _mobChantierMap) OU draft
+  const mobilier = (ch && typeof _mobChantierMap==='function') ? _mobChantierMap(ch) : (d.mobilier||{});
+  const mobStock = (typeof mobGetStockLocal==='function') ? mobGetStockLocal() : [];
 
   if(!tentes.length && !containers.length && !chauffage.length && Object.keys(mobilier).length===0){
     alert('Le chantier est vide.');return;
@@ -7595,7 +7598,7 @@ function mobAddFromPanel(){
   const note = (document.getElementById('mob-new-note')?.value||'').trim();
   if(!ref){ alert('La référence est obligatoire.'); return; }
   if(!des){ alert('La désignation est obligatoire.'); return; }
-  const stock = mobGetStock();
+  const stock = mobGetStockLocal();
   if(stock.find(m=>m.ref===ref)){alert('Cette référence existe déjà.');return;}
   stock.push({ref, nom:des, designation:des, qty, note});
   mobSaveStock(stock);
