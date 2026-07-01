@@ -678,7 +678,7 @@ const P93={
 ══════════════════════════════════════ */
 const P240={
   PM:{10:{te:2,th:2,s6e:0,s6h:4,t12:3,be:2,bh:4},12:{te:2,th:2,s6e:2,s6h:6,t12:3,be:2,bh:4},15:{te:2,th:2,s6e:2,s6h:8,t12:3,be:2,bh:4},16:{te:2,th:2,s6e:4,s6h:8,t12:3,be:4,bh:4},20:{te:4,th:4,s6e:2,s6h:10,t12:3,be:4,bh:6},25:{te:4,th:4,s6e:4,s6h:14,t12:3,be:4,bh:8}},
-  FX:{10:{bf4:1,bf5:0,t5:0,t2p:0,t3p:0,r5:2,r2p:0,r3p:0,tp12p:2,tp12s:0,tr5a:0,tr5s:1,tr3s:0,pgl:'Pignon complet 10m',ptb:1},12:{bf4:2,bf5:0,t5:0,t2p:1,t3p:0,r5:2,r2p:1,r3p:0,tp12p:2,tp12s:0,tr5a:0,tr5s:1,tr3s:0,pgl:'Pignon complet 12m',ptb:2},15:{bf4:2,bf5:0,t5:0,t2p:0,t3p:0,r5:3,r2p:0,r3p:0,tp12p:0,tp12s:0,tr5a:3,tr5s:1,tr3s:0,pgl:'Pignon complet 15m',ptb:2},16:{bf4:2,bf5:1,t5:0,t2p:0,t3p:2,r5:2,r2p:0,r3p:2,tp12p:2,tp12s:0,tr5a:0,tr5s:1,tr3s:2,pgl:'Pignon complet 16m',ptb:3},20:{bf4:2,bf5:1,t5:0,t2p:0,t3p:0,r5:4,r2p:0,r3p:0,tp12p:2,tp12s:2,tr5a:1,tr5s:2,tr3s:0,pgl:'Pignon complet 20m',ptb:3},25:{bf4:2,bf5:2,t5:0,t2p:0,t3p:0,r5:5,r2p:0,r3p:0,tp12p:2,tp12s:2,tr5a:1,tr5s:2,tr3s:0,pgl:'Pignon complet 25m',ptb:4}},
+  FX:{10:{bf4:1,bf5:0,t5:0,t2p:0,t3p:0,r5:2,r2p:0,r3p:0,tp12p:2,tp12s:0,tr5a:0,tr5s:1,tr3s:0,pgl:'Pignon complet 10m',ptb:2},12:{bf4:2,bf5:0,t5:0,t2p:1,t3p:0,r5:2,r2p:1,r3p:0,tp12p:2,tp12s:0,tr5a:0,tr5s:1,tr3s:0,pgl:'Pignon complet 12m',ptb:2},15:{bf4:2,bf5:0,t5:0,t2p:0,t3p:0,r5:3,r2p:0,r3p:0,tp12p:0,tp12s:0,tr5a:3,tr5s:1,tr3s:0,pgl:'Pignon complet 15m',ptb:3},16:{bf4:2,bf5:1,t5:0,t2p:0,t3p:2,r5:2,r2p:0,r3p:2,tp12p:2,tp12s:0,tr5a:0,tr5s:1,tr3s:2,pgl:'Pignon complet 16m',ptb:2},20:{bf4:2,bf5:1,t5:0,t2p:0,t3p:0,r5:4,r2p:0,r3p:0,tp12p:2,tp12s:2,tr5a:1,tr5s:2,tr3s:0,pgl:'Pignon complet 20m',ptb:4},25:{bf4:2,bf5:2,t5:0,t2p:0,t3p:0,r5:5,r2p:0,r3p:0,tp12p:2,tp12s:2,tr5a:1,tr5s:2,tr3s:0,pgl:'Pignon complet 25m',ptb:5}},
   DIM:{fm:{10:5390,12:6442,15:8017,16:8678,20:10648,25:13277},ct:{10:6675,12:7681,15:8764,16:9536,20:11286,25:13716},bm:{10:11845,12:13949,15:17099,16:18421,20:22361,25:27619},cp:{H3:5490,H4:6077,H5:6950}},
   CA:{pcp:4,pcf:4,cp:4,ct:4},
   ORD:[/Piquet noir/i,/Barre tension petit/i,/Goupille L/i,/Goupille Ferme/i,/Goupille Faîte/i,/Plaque câble Pil/i,/Plaque câble Faî/i,/^Plaque de base$/i,/Vis M20/i,/Piquet \d/i,/^Câble pil/i,/^Câble toit/i,/Ampoule/i,/^Faîte$/i,/^Pilier /i,/^Ferme /i,/Tube 60×60 lum/i,/^Tube 60×60$/i,/Tube 120×80 rain/i,/Barre ferm.*4m/i,/Barre ferm.*5m/i,/Sablière double/i,/Sablière simple/i,/Bloc béton/i,/Sangle/i,/Barre tension bâche 5/i,/Barre tension bâche [23]/i,/Barre tension bâche/i,/Tube 120×80 avec/i,/Tube 120×80 sans/i,/Tube rond 5.*avec/i,/Tube rond 5.*sans/i,/Tube rond 3.*sans/i,/Barre tension rideau 2/i,/Barre tension rideau 3/i,/Barre tension rideau 5/i,/Plaque de base pilier/i,/Plaque de base pignon/i],
@@ -715,7 +715,7 @@ const P240={
     const r2T=Math.round(f.r2p*_rpF);
     const r3T=Math.round(f.r3p*_rpF);
     const bT=N*tn;
-    const ten5=Math.round(f.t5*_rpF + 2*N*tn);
+    const ten5=Math.round(f.t5*_rpF + 2*N*tn + f.ptb*_pF); // latéraux + pignons (ptb = barres tension bâche par pignon)
     const ten2=Math.round(f.t2p*_rpF);
     const ten3=Math.round(f.t3p*_rpF);
     const _pF=(2+pIn)*tn; // pignon factor
