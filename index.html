@@ -2835,13 +2835,14 @@ function switchProfile(prof, tabEl){
   if(prof==='stock'){
     const rg=document.querySelector('.rg'); if(rg)rg.style.display='none';
     const vw=document.getElementById('viz-wrap'); if(vw)vw.style.display='none';
-    /* topbar gérée par _topbarMode() */
     const eb=$('err'); if(eb){eb.textContent='';eb.className='err';}
     const cp=document.getElementById('cont-right-panel'); if(cp){cp.style.display='none';cp.innerHTML='';}
     const cmdp=document.getElementById('cmd-right-panel'); if(cmdp){cmdp.style.display='none';cmdp.innerHTML='';}
+    document.querySelectorAll('.rc').forEach(e=>e.style.display='');
     document.querySelectorAll('.rc.B').forEach(e=>e.style.display='none');
     const sp=document.getElementById('stock-right-panel'); if(sp)sp.style.display='block';
     const hdr=document.querySelector('.hdr-right'); if(hdr)hdr.style.display='none';
+    const ab=document.getElementById('cfg-actions-bar'); if(ab)ab.style.display='none';
     setTimeout(renderStock,50);
     return;
   }
