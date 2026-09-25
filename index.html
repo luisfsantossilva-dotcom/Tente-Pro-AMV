@@ -8560,9 +8560,14 @@ function stockUsageView(){
   return html;
 }
 
-function renderStock(){
+function renderStock(skipLeft){
   const inner=document.getElementById('stock-params-inner');
-  if(inner){inner.innerHTML=stockParamsLeft();bindInputs();}
+  if(inner&&!skipLeft){inner.innerHTML=stockParamsLeft();bindInputs();}
+  // Restaurar valores dos inputs de pesquisa após re-render do painel esquerdo
+  if(inner&&!skipLeft){
+    const si=document.getElementById('stock-search'); if(si) si.value=S.stockQ||'';
+    const su=document.getElementById('stock-usage-search'); if(su) su.value=S.stockUsageSearch||'';
+  }
   const panel=document.getElementById('stock-right-panel');
   if(panel){
     panel.style.display='block';
@@ -8629,6 +8634,7 @@ function stockParamsLeft(){
 }
 
 function stockRenderRight(){
+  // Atualizar só o painel direito — sem recriar o painel esquerdo (preserva o foco do input)
   const panel=document.getElementById('stock-right-panel');
   if(!panel) return;
   if(S.stockCat==='Mobilier'){ try{renderMobilierStock('stock-right-panel');}catch(e){} return; }
