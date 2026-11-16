@@ -1866,7 +1866,8 @@ function cheneauBuildPieces(p){
   ].filter(s=>+(s.a||0)>+(s.de||0));
 
   const A=[], B=[];
-  let totalSupp=0;
+  let totalSupp=0, totPieces5=0, totVis=0;
+  const det5=[], detVis=[];
 
   allSegs.forEach(seg=>{
     const de=+(seg.de||0), a=+(seg.a||0);
@@ -1875,9 +1876,12 @@ function cheneauBuildPieces(p){
     totalSupp    += nPil;
 
     if(type==='metal'){
-      // Chéneau métallique: 1 pièce par segment
-      const nom='Chéneau métallique '+longSeg+'m (côté '+seg.cote+' '+de+'→'+a+'m)';
-      A.push({name:nom, qty:1, detail:nPil+' piliers'});
+      // Chéneau métallique: pièces de 5m (longSeg/5 par segment)
+      const nPieces = Math.max(1, Math.round(longSeg/5));
+      totPieces5 += nPieces;
+      totVis     += nPieces+2;      // vis M10/20 fileté = pièces 5m + 2 (par segment)
+      det5.push('côté '+seg.cote+' '+de+'→'+a+'m: '+nPieces+' pc');
+      detVis.push('côté '+seg.cote+': '+nPieces+'+2');
     } else {
       // Bâche chéneau: longueur + 2m caimento
       const longBache = longSeg+2;
@@ -1886,8 +1890,22 @@ function cheneauBuildPieces(p){
     }
   });
 
-  // Suppression de sangle: 1 ligne globale par côté (ou groupée)
-  if(totalSupp>0){
+  if(type==='metal' && totPieces5>0){
+    A.push({name:'Chéneau métallique 5m', qty:totPieces5, detail:det5.join(' | ')});
+    A.push({name:'Vis M10/20 fileté', qty:totVis, detail:detVis.join(' | ')+' (pièces 5m + 2 par segment)'});
+  }
+
+  // Suppression de sangle
+  // Règle métallique 2 côtés : suppressions des 2 côtés, dont UN côté (D) en "avec tirage"
+  if(type==='metal' && cotes==='2'){
+    const segsG=allSegs.filter(s=>s.cote==='G'), segsD=allSegs.filter(s=>s.cote==='D');
+    const nG=segsG.reduce((s,sg)=>s+cheneauSegPiliers(sg),0);
+    const nD=segsD.reduce((s,sg)=>s+cheneauSegPiliers(sg),0);
+    if(nG>0) A.push({name:'Suppression de sangle', qty:nG,
+      detail:'côté G : '+segsG.map(s=>s.de+'→'+s.a+'m ('+cheneauSegPiliers(s)+' pil.)').join(', ')});
+    if(nD>0) A.push({name:'Suppression de sangle avec tirage', qty:nD,
+      detail:'côté D : '+segsD.map(s=>s.de+'→'+s.a+'m ('+cheneauSegPiliers(s)+' pil.)').join(', ')});
+  } else if(totalSupp>0){
     A.push({name:'Suppression de sangle', qty:totalSupp,
       detail:allSegs.map(s=>'côté '+s.cote+' '+s.de+'→'+s.a+'m: '+cheneauSegPiliers(s)+' pil.').join(' | ')});
   }
@@ -1997,8 +2015,8 @@ function cheneauHTML(){
       </div>
       <!-- Segments -->
       ${cheneauCoteUI('G', S.cheneauCotes==='2'?'Côté Gauche':'Côté')}
-      ${S.cheneauCotes==='2'?cheneauCoteUI('D','Côté Droit'):''}
-      <div style="font-size:9px;color:#92400e;opacity:.7;margin-top:2px">Arceaux tous les 5m · 1 Suppression de sangle par tête de pilier${type==='bache'?' · Bâche = longueur + 2m caimento':''}</div>
+      ${S.cheneauCotes==='2'?cheneauCoteUI('D', type==='metal'?'Côté Droit — avec tirage':'Côté Droit'):''}
+      <div style="font-size:9px;color:#92400e;opacity:.7;margin-top:2px">Arceaux tous les 5m · 1 Suppression de sangle par tête de pilier${type==='metal'?' · Pièces 5m + Vis M10/20 fileté (pièces+2/segment)':''}${type==='metal'&&S.cheneauCotes==='2'?' · 2 côtés : côté D en suppression avec tirage':''}${type==='bache'?' · Bâche = longueur + 2m caimento':''}</div>
       `:''}
     </div>`;
 }
