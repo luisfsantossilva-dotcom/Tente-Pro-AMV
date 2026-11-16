@@ -949,8 +949,9 @@ const P334={
     // ── Tube 120×80 lisse : base + bonus H6 (+2 par câble set) ──
     addA('Tube 120×80 lisse', d.lisse*N + (h334==='H6' ? 2*cs : 0));
     addA('Tube 120×80 rainuré',2*N);
-    if(season==='ete'){addA('Tube 60×60 lumière',d.lumEte*N);addA('Ampoule',d.lumEte*N);}
-    else{addA('Tube 60×60 lumière',d.lumHiv*N);addA('Tube 60×60',d.t60hiv*N);addA('Ampoule',d.lumHiv*N);}
+    const lum334=(p.lumiere||'avec')!=='sans';
+    if(season==='ete'){if(lum334){addA('Tube 60×60 lumière',d.lumEte*N);addA('Ampoule',d.lumEte*N);}}
+    else{if(lum334){addA('Tube 60×60 lumière',d.lumHiv*N);addA('Ampoule',d.lumHiv*N);}addA('Tube 60×60',d.t60hiv*N);}
     addA('Piquet '+(p.piquetSize||'50')+' cm',d.piquet50[0]+d.piquet50[1]*(N-1)+plaqPerPig*4*pIn); // +plaqPerPig×4 piquets par pignon extra
     addA('Barre tension petit',d.barTens[0]+d.barTens[1]*(N-1)+d.barTens[1]*pIn);
     // plaqPerPig defined above
@@ -1012,9 +1013,9 @@ const P334={
       Ar.push({name:'Tube 120×80 rainuré — '+lk+' m',qty:2});
       Ar.push({name:'Tube 120×80 lisse — '+lk+' m',qty:d.lisse});
       if(season==='ete'){
-        Ar.push({name:'Tube 60×60 lumière — '+lk+' m',qty:d.lumEte});
+        if(lum334) Ar.push({name:'Tube 60×60 lumière — '+lk+' m',qty:d.lumEte});
       } else {
-        Ar.push({name:'Tube 60×60 lumière — '+lk+' m',qty:d.lumHiv});
+        if(lum334) Ar.push({name:'Tube 60×60 lumière — '+lk+' m',qty:d.lumHiv});
         Ar.push({name:'Tube 60×60 — '+lk+' m',qty:d.t60hiv});
       }
       Ar.push({name:'Barre tension bâche '+lk+' m',qty:d.barTens[1]||2});
@@ -2619,6 +2620,12 @@ function paramsHTML(prof){
       <div class="fg"><label>Hauteur</label><div class="trow">
         <button class="tbtn \${S.hauteur334==='H4'?'on':''}" onclick="setT('hauteur334','H4',this)">H4</button>
         <button class="tbtn \${S.hauteur334==='H6'?'on':''}" onclick="setT('hauteur334','H6',this)">H6</button>
+      </div></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>Lumière</label><div class="trow">
+        <button class="tbtn \${S.lumiere==='avec'?'on':''}" onclick="setT('lumiere','avec',this)">Avec</button>
+        <button class="tbtn \${S.lumiere==='sans'?'on':''}" onclick="setT('lumiere','sans',this)">Sans</button>
       </div></div>
     </div>
     <div class="fr">
