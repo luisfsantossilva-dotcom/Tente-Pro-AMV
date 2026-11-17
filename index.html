@@ -922,7 +922,7 @@ const P334={
     '24.85':{label:'24,85 m',ferme:'Ferme 24,85m (13260 mm)',rally:null,bache:'Bâche toiture 24,85m (27870 mm)',pignLabel:'Pignon complet 25m',brFaite:'3630mm',visArc:4,lumEte:6,lumHiv:4,lisse:5,t60hiv:6,piquet50:[40,12],barTens:[8,2],plaqP240:[8,0],ri5:[12,2],bt5:[12,2],ri2:0,bt2:0,bferm4:8,bferm5:0,bferm7:0,t120s:4,tr5a:2,tr5s:1,tr2a:0,ri2pig:0,cab46:8,cblDbl:4,cabRally:['Rallonge câble F25 (2289mm)',4],warn:null},
     '32':{label:'32 m',ferme:'Ferme 24,85m (13260 mm)',rally:['Rallonge ferme 32m (3761mm)',2],bache:'Bâche toiture 32m (35392 mm)',pignLabel:'Pignon complet 32m',brFaite:'3630mm',visArc:8,lumEte:6,lumHiv:4,lisse:5,t60hiv:6,piquet50:[48,12],barTens:[12,4],plaqP240:[12,0],ri5:[12,2],bt5:[14,2],ri2:2,bt2:2,bferm4:8,bferm5:0,bferm7:4,t120s:6,tr5a:2,tr5s:1,tr2a:2,ri2pig:2,cab46:12,cblDbl:8,cabRally:['Rallonge câble F32 (1073mm)',4],warn:null},
     '40.38':{label:'40,38 m',ferme:'Ferme 24,85m (13260 mm)',rally:['Rallonge ferme 40,38m (8171mm)',2],bache:'Bâche toiture 40,38m (44212 mm)',pignLabel:'Pignon complet 40m',brFaite:'4826mm',visArc:8,lumEte:8,lumHiv:4,lisse:7,t60hiv:6,piquet50:[52,12],barTens:[14,2],plaqP240:[14,0],ri5:[18,2],bt5:[18,2],ri2:0,bt2:0,bferm4:8,bferm5:0,bferm7:6,t120s:8,tr5a:0,tr5s:2,tr2a:0,ri2pig:0,cab46:16,cblDbl:12,cabRally:null,warn:null},
-    '46':{label:'46 m',ferme:'Ferme 24,85m (13260 mm)',rally:['Rallonge ferme 46m (11121mm)',2],bache:'Bâche toiture 46m (50112mm)',pignLabel:'Pignon complet 46m',brFaite:'4826mm',visArc:8,lumEte:10,lumHiv:4,lisse:7,t60hiv:6,piquet50:[60,12],barTens:[18,2],plaqP240:[18,0],ri5:[18,2],bt5:[18,2],ri2:0,bt2:0,ri3pig:4,bferm4:8,bferm5:0,bferm7:10,t120s:8,tr5a:0,tr5s:2,tr2a:0,ri2pig:0,cab46:16,cblDbl:16,cabRally:['Rallonge câble F46 (1849mm)',4],warn:null},
+    '46':{label:'46 m',ferme:'Ferme 24,85m (13260 mm)',rally:['Rallonge ferme 46m (11121mm)',2],bache:'Bâche toiture 46m (50112mm)',pignLabel:'Pignon complet 46m',brFaite:'4826mm',visArc:8,lumEte:10,lumHiv:4,lisse:7,t60hiv:6,piquet50:[60,12],barTens:[18,2],plaqP240:[18,0],ri5:[18,2],bt5:[18,2],ri2:0,bt2:0,ri3pig:4,bferm4:8,bferm5:0,bferm7:10,t120s:8,tr5a:0,tr5s:2,tr2a:0,ri2pig:0,cab46:16,cblDbl:16,cabRally:['Rallonge câble F46 (3017mm)',4],warn:null},
   },
   cblSets(N){return Math.ceil(N/3);},
   build(p){
@@ -973,12 +973,14 @@ const P334={
     // ── PLAQUES CÂBLE — varient selon hauteur H4/H6 ──
     addA('Plaque câble Gauche',2*cs);
     addA('Plaque câble Droite',2*cs);
-    // Plaque câble simple : 6 par câble set (H4) ou 12 par câble set (H6)
-    addA('Plaque câble simple', (h334==='H6' ? 12 : 6) * cs);
-    // Plaque câble pilier : 2 par câble set (H4) ou 4 par câble set (H6)
-    addA('Plaque câble pilier', (h334==='H6' ? 4 : 2) * cs);
-    addA('Plaque câble faite',4*cs);
-    addA('Vis M20×160',16*cs);
+    // (repris de la version GitHub du 25.09.2026, validée)
+    addA('Plaque câble Double',d.cblDbl*cs);
+    addA('Plaque câble Faîte', (h334==='H6' ? 12 : 4) * cs);
+    addA('Plaque câble Pilier + Vis M20×50', 4 * cs);
+    // Vis M20×160: formule validée = vis_cs[w][H] × cs + vis_arc[w][H] × arc
+    const VIS_CS={'20.20':{H4:16,H6:24},'24.85':{H4:16,H6:24},'32':{H4:24,H6:24},'40.38':{H4:32,H6:32},'46':{H4:40,H6:48}};
+    const VIS_ARC={'20.20':{H4:4,H6:4},'24.85':{H4:4,H6:4},'32':{H4:8,H6:8},'40.38':{H4:8,H6:8},'46':{H4:8,H6:8}};
+    addA('Vis M20×160', ((VIS_CS[w]||{})[h334]||0)*cs + ((VIS_ARC[w]||{})[h334]||0)*arc);
     // ── CÂBLES — couleur et quantité selon hauteur ──
     if(h334==='H6'){
       addA('Câble P6 (Vert)', 8*cs);
@@ -998,7 +1000,7 @@ const P334={
     if(ri3T>0) addA('Barre tension rideau 3m',ri3T);
     const errs=[addB('Rideau 5m',ri5T,p.ri5_mode,p.ri5_noir,p.ri5_cristal,p.ri5_fenetre,p.ri5_secours),addB('Rideau 2m',ri2T,p.ri2_mode,p.ri2_noir,p.ri2_cristal,null),addB('Rideau 3m',ri3T,p.ri3_mode,p.ri3_noir,p.ri3_cristal,null),addB(d.bache,bacT,p.b_mode,p.b_noir,p.b_cristal,null),addB(d.pignLabel,pigT,p.p_mode,p.p_noir,p.p_cristal,null)].filter(e=>e&&e.error);
     if(errs.length)return{error:errs[0].error};
-    const P334_ORD=[/^Piquet noir/i,/^Barre tension petit/i,/^Plaque de base P240/i,/^Goupille L P240/i,/^Piquet \d/i,/^Goupille L P334/i,/^Plaque de base P334/i,/^Goupille Pilier/i,/^Vis M20.140/i,/^Ampoule/i,/^Plaque câble Gauche/i,/^Plaque câble Droite/i,/^Plaque câble pilier/i,/^Plaque câble simple/i,/^Plaque câble faite/i,/^Vis M20.160/i,/^Câble P/i,/^Câble 46/i,/^Rallonge câble/i,/^Faîte/i,/^Pilier P4/i,/^Ferme /i,/^Rallonge ferme/i,/^Tube 60.60 lumi/i,/^Tube 60.60$/i,/^Tube 120.80 rainuré/i,/^Tube 120.80 lisse/i,/^Bracon pilier/i,/^Bracon faite/i,/^Barre fermeture 4/i,/^Barre fermeture 5/i,/^Barre fermeture 7/i,/^Barre tension bâche 5/i,/^Barre tension bâche [23]/i,/^Tube 120.80 pignon coupe droite/i,/^Tube 120.80 pignons coupe gauche/i,/^Tube 120.80 sans pipo/i,/^Tube rond 5.* sans pipo/i,/^Tube rond 5.* avec pipo/i,/^Tube rond 2.* avec pipo/i,/^Tube rond 3.* sans pipo/i];
+    const P334_ORD=[/^Piquet noir/i,/^Barre tension petit/i,/^Plaque de base P240/i,/^Goupille L P240/i,/^Piquet \d/i,/^Goupille L P334/i,/^Plaque de base P334/i,/^Goupille Pilier/i,/^Vis M20.140/i,/^Ampoule/i,/^Plaque câble Gauche/i,/^Plaque câble Droite/i,/^Plaque câble Pilier/i,/^Plaque câble Double/i,/^Plaque câble Fa[iî]te/i,/^Vis M20.160/i,/^Câble P/i,/^Câble 46/i,/^Rallonge câble/i,/^Faîte/i,/^Pilier P4/i,/^Ferme /i,/^Rallonge ferme/i,/^Tube 60.60 lumi/i,/^Tube 60.60$/i,/^Tube 120.80 rainuré/i,/^Tube 120.80 lisse/i,/^Bracon pilier/i,/^Bracon faite/i,/^Barre fermeture 4/i,/^Barre fermeture 5/i,/^Barre fermeture 7/i,/^Barre tension bâche 5/i,/^Barre tension bâche [23]/i,/^Tube 120.80 pignon coupe droite/i,/^Tube 120.80 pignons coupe gauche/i,/^Tube 120.80 sans pipo/i,/^Tube rond 5.* sans pipo/i,/^Tube rond 5.* avec pipo/i,/^Tube rond 2.* avec pipo/i,/^Tube rond 3.* sans pipo/i];
     const p334oi=n=>{const i=P334_ORD.findIndex(r=>r.test(n));return i<0?999:i;};
     const Ar=[...A.entries()].map(([n,q])=>({name:n,qty:q})).sort((a,b)=>p334oi(a.name)-p334oi(b.name));
     // ── Module spécial automatique P334 (reste après N×5m) ──
