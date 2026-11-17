@@ -975,12 +975,12 @@ const P334={
     addA('Plaque câble Droite',2*cs);
     // (repris de la version GitHub du 25.09.2026, validée)
     addA('Plaque câble Double',d.cblDbl*cs);
-    addA('Plaque câble Faîte', (h334==='H6' ? 12 : 4) * cs);
-    addA('Plaque câble Pilier + Vis M20×50', 4 * cs);
+    addA('Plaque câble Faîte', 4 * cs);   // identique H4/H6 (seules les plaques pilier changent en H6)
+    addA('Plaque câble Pilier + Vis M20×50', (h334==='H6' ? 8 : 4) * cs);   // H6 (P6) : double croix pilier → +4 plaques / travée câblée
     // Vis M20×160: formule validée = vis_cs[w][H] × cs + vis_arc[w][H] × arc
-    const VIS_CS={'20.20':{H4:16,H6:24},'24.85':{H4:16,H6:24},'32':{H4:24,H6:24},'40.38':{H4:32,H6:32},'46':{H4:40,H6:48}};
+    const VIS_CS={'20.20':{H4:16,H6:16},'24.85':{H4:16,H6:16},'32':{H4:24,H6:24},'40.38':{H4:32,H6:32},'46':{H4:40,H6:40}};   // H6 : le supplément pilier est ajouté plus bas (+8 / travée)
     const VIS_ARC={'20.20':{H4:4,H6:4},'24.85':{H4:4,H6:4},'32':{H4:8,H6:8},'40.38':{H4:8,H6:8},'46':{H4:8,H6:8}};
-    addA('Vis M20×160', ((VIS_CS[w]||{})[h334]||0)*cs + ((VIS_ARC[w]||{})[h334]||0)*arc);
+    addA('Vis M20×160', ((VIS_CS[w]||{})[h334]||0)*cs + ((VIS_ARC[w]||{})[h334]||0)*arc + (h334==='H6' ? 8*cs : 0));   // H6 (double croix pilier) : +8 vis par travée câblée
     // ── CÂBLES — couleur et quantité selon hauteur ──
     if(h334==='H6'){
       addA('Câble P6 (Vert)', 8*cs);
