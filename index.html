@@ -2130,6 +2130,16 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
             }
           }
         }
+        // câbles de pilier P334 : 1 croix par paroi (H4 = câble P4) ou 2 croix superposées (H6 = câble P6)
+        const nPX=Math.max(1,+ex.pilierX||1);
+        for(const xw of [0,W]){
+          for(let q=0;q<nPX;q++){
+            const za=He*q/nPX, zb=He*(q+1)/nPX;
+            svg += seg(p(xw,y0,za), p(xw,y1,zb), 1.4, C_PIL);
+            svg += seg(p(xw,y1,za), p(xw,y0,zb), 1.4, C_PIL);
+            if(q>0) svg += seg(p(xw,y0,za), p(xw,y1,za), 0.9, C_PIL, '2,2');
+          }
+        }
       } else {
         svg += seg(p(0,y0,He),   p(W/2,y1,Hr), 1.4, C_TOIT);
         svg += seg(p(0,y1,He),   p(W/2,y0,Hr), 1.4, C_TOIT);
@@ -2225,6 +2235,7 @@ function drawTent(svgId, W, L, bay, barPos, H_label, specialYs, extras){
     if(exMode==='toit'){
       const _nC=Math.max(1,+ex.croixParPan||1);
       legend.push({color:'#dc2626', label:_nC+' croix toit / pan (égout → faîte) — '+nX+' module'+(nX>1?'s':'')+' câblé'+(nX>1?'s':'')});
+      { const _np=Math.max(1,+ex.pilierX||1); legend.push({color:'#16a34a', label:(_np===2?'2 croix':'1 croix')+' câbles pilier / paroi ('+(_np===2?'câble P6 vert':'câble P4 rouge')+') — '+(nX*4*_np)+' câbles'}); }
       if(ex.rallonge) legend.push({color:'#7c3aed', label: ex.rallonge==='F46' ? 'Rallonge câble F46 = dernière croix, jusqu\'au faîte' : 'Dernière croix = câble 46 + rallonge '+ex.rallonge+' jusqu\'au faîte'});
     } else {
       legend.push({color:'#dc2626', label:(nX*4)+' câbles toit — '+nX+' module'+(nX>1?'s':'')+' câblé'+(nX>1?'s':'')+' (X par pan)'});
@@ -2384,7 +2395,7 @@ function updateViz(res, p, ovA){
         const _w334=String(gv('largeur334')||'20.20');
         const CFG={'20.20':[2,null],'24.85':[2,'F25'],'32':[3,'F32'],'40.38':[4,null],'46':[4,'F46']};
         const c=CFG[_w334]||[2,null];
-        extras={cabledBays:[...new Set(bays)], mode:'toit', croixParPan:c[0], rallonge:c[1]};
+        extras={cabledBays:[...new Set(bays)], mode:'toit', croixParPan:c[0], rallonge:c[1], pilierX:((S.hauteur334||'H4')==='H6'?2:1)};
       }
     }
     drawTent('tent-svg-wrap',      W2, L2, bay, barPos, hLabel, specialYs, extras);
