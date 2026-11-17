@@ -940,8 +940,9 @@ const P334={
     const plaqPerPig=Math.round((d.bferm4+(d.bferm7||0))/2);
     const N=N334,arc=N+1,cs=this.cblSets(N); // N334=floor(len/5), remL334=len%5
     const h334=p.hauteur334||'H4';
+    const PIL334 = h334==='H6' ? 'Pilier P6 profil 334 (6110mm)' : 'Pilier P4 profil 334 (3980mm)';
     const A=new Map();const addA=(n,q)=>{if(!n||!q||q<=0)return;A.set(n,(A.get(n)||0)+q);};
-    addA('Faîte',arc);addA('Pilier P4/P6 profil 334',2*arc);addA(d.ferme,2*arc);
+    addA('Faîte',arc);addA(PIL334,2*arc);addA(d.ferme,2*arc);
     if(d.rally)addA(d.rally[0],d.rally[1]*arc);
     addA('Goupille Pilier/Bracon P334',10*arc);/* Vis arceau : comptées en M20×160 (VIS_ARC × arc) — plus de M20×140 */
     addA('Bracon pilier (5263mm)',2*arc);addA('Bracon faite ('+d.brFaite+')',arc);
@@ -1000,7 +1001,7 @@ const P334={
     if(ri3T>0) addA('Barre tension rideau 3m',ri3T);
     const errs=[addB('Rideau 5m',ri5T,p.ri5_mode,p.ri5_noir,p.ri5_cristal,p.ri5_fenetre,p.ri5_secours),addB('Rideau 2m',ri2T,p.ri2_mode,p.ri2_noir,p.ri2_cristal,null),addB('Rideau 3m',ri3T,p.ri3_mode,p.ri3_noir,p.ri3_cristal,null),addB(d.bache,bacT,p.b_mode,p.b_noir,p.b_cristal,null),addB(d.pignLabel,pigT,p.p_mode,p.p_noir,p.p_cristal,null)].filter(e=>e&&e.error);
     if(errs.length)return{error:errs[0].error};
-    const P334_ORD=[/^Piquet noir/i,/^Barre tension petit/i,/^Plaque de base P240/i,/^Goupille L P240/i,/^Piquet \d/i,/^Goupille L P334/i,/^Plaque de base P334/i,/^Goupille Pilier/i,/^Vis M20.140/i,/^Ampoule/i,/^Plaque câble Gauche/i,/^Plaque câble Droite/i,/^Plaque câble Pilier/i,/^Plaque câble Double/i,/^Plaque câble Fa[iî]te/i,/^Vis M20.160/i,/^Câble P/i,/^Câble 46/i,/^Rallonge câble/i,/^Faîte/i,/^Pilier P4/i,/^Ferme /i,/^Rallonge ferme/i,/^Tube 60.60 lumi/i,/^Tube 60.60$/i,/^Tube 120.80 rainuré/i,/^Tube 120.80 lisse/i,/^Bracon pilier/i,/^Bracon faite/i,/^Barre fermeture 4/i,/^Barre fermeture 5/i,/^Barre fermeture 7/i,/^Barre tension bâche 5/i,/^Barre tension bâche [23]/i,/^Tube 120.80 pignon coupe droite/i,/^Tube 120.80 pignons coupe gauche/i,/^Tube 120.80 sans pipo/i,/^Tube rond 5.* sans pipo/i,/^Tube rond 5.* avec pipo/i,/^Tube rond 2.* avec pipo/i,/^Tube rond 3.* sans pipo/i];
+    const P334_ORD=[/^Piquet noir/i,/^Barre tension petit/i,/^Plaque de base P240/i,/^Goupille L P240/i,/^Piquet \d/i,/^Goupille L P334/i,/^Plaque de base P334/i,/^Goupille Pilier/i,/^Vis M20.140/i,/^Ampoule/i,/^Plaque câble Gauche/i,/^Plaque câble Droite/i,/^Plaque câble Pilier/i,/^Plaque câble Double/i,/^Plaque câble Fa[iî]te/i,/^Vis M20.160/i,/^Câble P/i,/^Câble 46/i,/^Rallonge câble/i,/^Faîte/i,/^Pilier P[46]/i,/^Ferme /i,/^Rallonge ferme/i,/^Tube 60.60 lumi/i,/^Tube 60.60$/i,/^Tube 120.80 rainuré/i,/^Tube 120.80 lisse/i,/^Bracon pilier/i,/^Bracon faite/i,/^Barre fermeture 4/i,/^Barre fermeture 5/i,/^Barre fermeture 7/i,/^Barre tension bâche 5/i,/^Barre tension bâche [23]/i,/^Tube 120.80 pignon coupe droite/i,/^Tube 120.80 pignons coupe gauche/i,/^Tube 120.80 sans pipo/i,/^Tube rond 5.* sans pipo/i,/^Tube rond 5.* avec pipo/i,/^Tube rond 2.* avec pipo/i,/^Tube rond 3.* sans pipo/i];
     const p334oi=n=>{const i=P334_ORD.findIndex(r=>r.test(n));return i<0?999:i;};
     const Ar=[...A.entries()].map(([n,q])=>({name:n,qty:q})).sort((a,b)=>p334oi(a.name)-p334oi(b.name));
     // ── Module spécial automatique P334 (reste après N×5m) ──
@@ -1008,7 +1009,7 @@ const P334={
       const lk=String(remL334).replace('.',',');
       // 1 arc supplémentaire sans câbles
       Ar.push({name:'Ferme P334 '+w.replace('.',',')+' m',qty:2,detail:'module spécial '+lk+'m'});
-      Ar.push({name:'Pilier P4/P6 profil 334',qty:2,detail:'module spécial '+lk+'m'});
+      Ar.push({name:PIL334,qty:2,detail:'module spécial '+lk+'m'});
       Ar.push({name:'Faîte',qty:1,detail:'module spécial '+lk+'m'});
       Ar.push({name:'Goupille Pilier/Bracon P334',qty:10,detail:'module spécial '+lk+'m'});
       // Tubes longitudinaux (même qty que modules 5m, longueur spéciale)
