@@ -943,7 +943,7 @@ const P334={
     const A=new Map();const addA=(n,q)=>{if(!n||!q||q<=0)return;A.set(n,(A.get(n)||0)+q);};
     addA('Faîte',arc);addA('Pilier P4/P6 profil 334',2*arc);addA(d.ferme,2*arc);
     if(d.rally)addA(d.rally[0],d.rally[1]*arc);
-    addA('Goupille Pilier/Bracon P334',10*arc);addA('Vis M20×140',d.visArc*arc);
+    addA('Goupille Pilier/Bracon P334',10*arc);/* Vis arceau : comptées en M20×160 (VIS_ARC × arc) — plus de M20×140 */
     addA('Bracon pilier (5263mm)',2*arc);addA('Bracon faite ('+d.brFaite+')',arc);
     addA('Plaque de base P334',2*arc);addA('Goupille L P334',2*arc);
     // ── Tube 120×80 lisse : base + bonus H6 (+2 par câble set) ──
