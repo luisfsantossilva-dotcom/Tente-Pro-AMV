@@ -681,7 +681,7 @@ const P240={
   FX:{10:{bf4:2,bf5:0,t5:6,t2p:0,t3p:0,r5:6,r2p:0,r3p:0,tp12p:4,tp12s:0,tr5a:0,tr5s:1,tr3s:0,pgl:'Pignon complet 10m',ptb:2},12:{bf4:4,bf5:0,t5:6,t2p:2,t3p:0,r5:6,r2p:2,r3p:0,tp12p:4,tp12s:0,tr5a:0,tr5s:1,tr3s:0,pgl:'Pignon complet 12m',ptb:4},15:{bf4:4,bf5:0,t5:8,t2p:0,t3p:0,r5:8,r2p:0,r3p:0,tp12p:0,tp12s:0,tr5a:6,tr5s:2,tr3s:0,pgl:'Pignon complet 15m',ptb:4},16:{bf4:4,bf5:2,t5:6,t2p:0,t3p:4,r5:8,r2p:0,r3p:4,tp12p:4,tp12s:0,tr5a:0,tr5s:1,tr3s:4,pgl:'Pignon complet 16m',ptb:6},20:{bf4:4,bf5:2,t5:10,t2p:0,t3p:0,r5:10,r2p:0,r3p:0,tp12p:4,tp12s:2,tr5a:2,tr5s:1,tr3s:0,pgl:'Pignon complet 20m',ptb:6},25:{bf4:4,bf5:4,t5:12,t2p:0,t3p:0,r5:12,r2p:0,r3p:0,tp12p:4,tp12s:4,tr5a:0,tr5s:2,tr3s:0,pgl:'Pignon complet 25m',ptb:8}},
   DIM:{fm:{10:5390,12:6442,15:8017,16:8678,20:10648,25:13277},ct:{10:6675,12:7681,15:8764,16:9536,20:11286,25:13716},bm:{10:11845,12:13949,15:17099,16:18421,20:22361,25:27619},cp:{H3:5490,H4:6077,H5:6950},pil:{H3:2601,H4:3651,H5:4942}},
   CA:{pcp:4,pcf:4,cp:4,ct:4},
-  ORD:[/Piquet noir/i,/Barre tension petit/i,/Goupille L/i,/Goupille Ferme/i,/Goupille Faîte/i,/Plaque câble Pil/i,/Plaque câble Faî/i,/^Plaque de base$/i,/Vis M20/i,/Piquet \d/i,/^Câble pil/i,/^Câble toit/i,/Ampoule/i,/^Faîte$/i,/^Pilier /i,/^Ferme /i,/Tube 60×60 lum/i,/^Tube 60×60$/i,/Tube 120×80 rain/i,/Barre ferm.*4m/i,/Barre ferm.*5m/i,/Sablière double/i,/Sablière simple/i,/Bloc béton/i,/Sangle/i,/Barre tension bâche 5/i,/Barre tension bâche [23]/i,/Barre tension bâche/i,/Tube 120×80 avec/i,/Tube 120×80 sans/i,/Tube rond 5.*avec/i,/Tube rond 5.*sans/i,/Tube rond 3.*sans/i,/Barre tension rideau 2/i,/Barre tension rideau 3/i,/Barre tension rideau 5/i,/Plaque de base pilier/i,/Plaque de base pignon/i],
+  ORD:[/Piquet noir/i,/Barre tension petit/i,/Goupille L/i,/Goupille Ferme/i,/Goupille Faîte/i,/Plaque câble Pil/i,/Plaque câble Faî/i,/^Plaque de base$/i,/Vis M20/i,/Piquet \d/i,/^Câble pil/i,/^Câble toit/i,/Ampoule/i,/^Faîte$/i,/^Pilier /i,/^Ferme /i,/Tube 60×60 lum/i,/^Tube 60×60$/i,/Tube 120×80 rain/i,/Barre ferm.*4m/i,/Barre ferm.*5m/i,/Barre ferm.*P334 petite/i,/Barre ferm.*7m/i,/Sablière double/i,/Sablière simple/i,/Bloc béton/i,/Sangle/i,/Barre tension bâche 5/i,/Barre tension bâche [23]/i,/Barre tension bâche/i,/Tube 120×80 avec/i,/Tube 120×80 sans/i,/Tube rond 5.*avec/i,/Tube rond 5.*sans/i,/Tube rond 3.*sans/i,/Barre tension rideau 2/i,/Barre tension rideau 3/i,/Barre tension rideau 5/i,/Plaque de base pilier/i,/Plaque de base pignon/i],
   pt(H){return H==='H3'?'P2,6':H==='H4'?'P3,6':'P5';},
   mcab(N){return Math.ceil(N/4);},
   build(p){
@@ -734,7 +734,9 @@ const P240={
     addA('Goupille L',gL);addA('Goupille Ferme',gFb+(sab==='oui'?Math.max(0,sabD+sabS-2):0));addA('Goupille Faîte',gFi);
     addA('Faîte',fai);addA(PIL240,pil);addA('Ferme '+w+' m ('+this.DIM.fm[w]+' mm)',fer);
     addA('Tube 60×60 lumière',tL);addA('Tube 60×60',t6);addA('Tube 120×80 rainuré',t12);
-    addA('Barre fermeture 4m',bf4);addA('Barre fermeture 5m',bf5);
+    if(H==='H5'){ addA('Barre fermeture P334 petite',bf4); addA('Barre fermeture 7m P334',bf5); }
+    else if(H==='H4'){ addA('Barre fermeture 4m + rallonge 1m',bf4); addA('Barre fermeture 5m + rallonge 1m',bf5); }
+    else { addA('Barre fermeture 4m',bf4); addA('Barre fermeture 5m',bf5); }
     if(sab==='oui'){addA('Sablière double',sabD);addA('Sablière simple',sabS);}
     if(blocs>0){addA('Bloc béton 500 kg',blocs);addA("Sangle d'arrimage",sangl);addA('Goupille L',blocs);}
     addA('Plaque câble Pilier (double)',pcP);addA('Plaque câble Faîte (simple)',pcF);
@@ -7029,8 +7031,9 @@ function canonPiece(raw, profil){
   if(n==='Tube rond 5m avec pipo') return 'Tube rond 5m avec pipo';
   if(n==='Tube rond 5m sans pipo') return 'Tube rond 5m sans pipo';
   if(n==='Tube rond 3m sans pipo') return 'Tube rond 3m sans pipo';
-  if(n==='Barre fermeture 4m') return 'Barre fermeture 4m';
-  if(n==='Barre fermeture 5m') return 'Barre fermeture 5m';
+  if(n==='Barre fermeture 4m'||n==='Barre fermeture 4m + rallonge 1m') return 'Barre fermeture 4m';
+  if(n==='Barre fermeture 5m'||n==='Barre fermeture 5m + rallonge 1m') return 'Barre fermeture 5m';
+  if(n==='Barre fermeture 7m P334') return 'Barre fermeture 7m P334';
   if(m=n.match(/^Barre tension bâche (\d+)m$/)) return `Barre tension bâche ${m[1]}m`;
   // ── P93/50 SPÉCIFIQUE ──
   if(n==='Tube 60×40 (avec lumière)') return 'Tube 60×40 avec lumière P93/50';
