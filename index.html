@@ -679,7 +679,7 @@ const P93={
 const P240={
   PM:{10:{te:2,th:2,s6e:0,s6h:2,t12:3,be:2,bh:4},12:{te:2,th:4,s6e:2,s6h:2,t12:3,be:2,bh:4},15:{te:2,th:4,s6e:2,s6h:4,t12:3,be:2,bh:4},16:{te:2,th:4,s6e:4,s6h:6,t12:3,be:4,bh:4},20:{te:4,th:6,s6e:2,s6h:6,t12:3,be:4,bh:6},25:{te:4,th:8,s6e:4,s6h:8,t12:3,be:4,bh:8}},
   FX:{10:{bf4:2,bf5:0,t5:6,t2p:0,t3p:0,r5:6,r2p:0,r3p:0,tp12p:4,tp12s:0,tr5a:0,tr5s:1,tr3s:0,pgl:'Pignon complet 10m',ptb:2},12:{bf4:4,bf5:0,t5:6,t2p:2,t3p:0,r5:6,r2p:2,r3p:0,tp12p:4,tp12s:0,tr5a:0,tr5s:1,tr3s:0,pgl:'Pignon complet 12m',ptb:4},15:{bf4:4,bf5:0,t5:8,t2p:0,t3p:0,r5:8,r2p:0,r3p:0,tp12p:0,tp12s:0,tr5a:6,tr5s:2,tr3s:0,pgl:'Pignon complet 15m',ptb:4},16:{bf4:4,bf5:2,t5:6,t2p:0,t3p:4,r5:8,r2p:0,r3p:4,tp12p:4,tp12s:0,tr5a:0,tr5s:1,tr3s:4,pgl:'Pignon complet 16m',ptb:6},20:{bf4:4,bf5:2,t5:10,t2p:0,t3p:0,r5:10,r2p:0,r3p:0,tp12p:4,tp12s:2,tr5a:2,tr5s:1,tr3s:0,pgl:'Pignon complet 20m',ptb:6},25:{bf4:4,bf5:4,t5:12,t2p:0,t3p:0,r5:12,r2p:0,r3p:0,tp12p:4,tp12s:4,tr5a:0,tr5s:2,tr3s:0,pgl:'Pignon complet 25m',ptb:8}},
-  DIM:{fm:{10:5390,12:6442,15:8017,16:8678,20:10648,25:13277},ct:{10:6675,12:7681,15:8764,16:9536,20:11286,25:13716},bm:{10:11845,12:13949,15:17099,16:18421,20:22361,25:27619},cp:{H3:5490,H4:6077,H5:6950}},
+  DIM:{fm:{10:5390,12:6442,15:8017,16:8678,20:10648,25:13277},ct:{10:6675,12:7681,15:8764,16:9536,20:11286,25:13716},bm:{10:11845,12:13949,15:17099,16:18421,20:22361,25:27619},cp:{H3:5490,H4:6077,H5:6950},pil:{H3:2601,H4:3651,H5:4942}},
   CA:{pcp:4,pcf:4,cp:4,ct:4},
   ORD:[/Piquet noir/i,/Barre tension petit/i,/Goupille L/i,/Goupille Ferme/i,/Goupille Faîte/i,/Plaque câble Pil/i,/Plaque câble Faî/i,/^Plaque de base$/i,/Vis M20/i,/Piquet \d/i,/^Câble pil/i,/^Câble toit/i,/Ampoule/i,/^Faîte$/i,/^Pilier /i,/^Ferme /i,/Tube 60×60 lum/i,/^Tube 60×60$/i,/Tube 120×80 rain/i,/Barre ferm.*4m/i,/Barre ferm.*5m/i,/Sablière double/i,/Sablière simple/i,/Bloc béton/i,/Sangle/i,/Barre tension bâche 5/i,/Barre tension bâche [23]/i,/Barre tension bâche/i,/Tube 120×80 avec/i,/Tube 120×80 sans/i,/Tube rond 5.*avec/i,/Tube rond 5.*sans/i,/Tube rond 3.*sans/i,/Barre tension rideau 2/i,/Barre tension rideau 3/i,/Barre tension rideau 5/i,/Plaque de base pilier/i,/Plaque de base pignon/i],
   pt(H){return H==='H3'?'P2,6':H==='H4'?'P3,6':'P5';},
@@ -698,7 +698,7 @@ const P240={
     const _validRem=[0,1,2,2.5,3,3.5,4];
     if(remL>0 && !_validRem.includes(remL))return{error:'Module spécial invalide: '+remL+'m. Valides: 1,2,2.5,3,3.5m.'};
     const pIn=+p.pignonInter||0;
-    const aT=(N+1)*tn,piT=(2+pIn)*tn;const pt=this.pt(H);
+    const aT=(N+1)*tn,piT=(2+pIn)*tn;const pt=this.pt(H);const PIL240='Pilier '+pt+' ('+this.DIM.pil[H]+' mm)';
     const gFb=4*aT,gFi=4*aT,fai=aT,pil=2*aT,fer=2*aT;
     // bf4/bf5 are TOTAL for 2 pignons per tente; extra pignons add proportionally
     const bf4=Math.round(f.bf4*tn*(2+pIn)/2),bf5=Math.round(f.bf5*tn*(2+pIn)/2),bfT=bf4+bf5;
@@ -732,7 +732,7 @@ const P240={
     addA('Piquet noir',piqN); // fixe: 8 piquets noirs
     addA('Piquet '+(p.piquetSize||'50')+' cm',piq50+Math.round(f.ptb/2)*4*pIn); // +plaques/pig×4 par pignon extra
     addA('Goupille L',gL);addA('Goupille Ferme',gFb+(sab==='oui'?Math.max(0,sabD+sabS-2):0));addA('Goupille Faîte',gFi);
-    addA('Faîte',fai);addA('Pilier '+pt,pil);addA('Ferme '+w+' m ('+this.DIM.fm[w]+' mm)',fer);
+    addA('Faîte',fai);addA(PIL240,pil);addA('Ferme '+w+' m ('+this.DIM.fm[w]+' mm)',fer);
     addA('Tube 60×60 lumière',tL);addA('Tube 60×60',t6);addA('Tube 120×80 rainuré',t12);
     addA('Barre fermeture 4m',bf4);addA('Barre fermeture 5m',bf5);
     if(sab==='oui'){addA('Sablière double',sabD);addA('Sablière simple',sabS);}
@@ -764,7 +764,7 @@ const P240={
       const smArcs=tn; // 1 arc par tente
       // Pièces structurales (pas de câbles)
       A.set('Ferme '+w+' m ('+this.DIM.fm[w]+' mm)',(A.get('Ferme '+w+' m ('+this.DIM.fm[w]+' mm)')||0)+2*smArcs);
-      A.set('Pilier '+pt,(A.get('Pilier '+pt)||0)+2*smArcs);
+      A.set(PIL240,(A.get(PIL240)||0)+2*smArcs);
       A.set('Faîte',(A.get('Faîte')||0)+smArcs);
       A.set('Goupille Ferme',(A.get('Goupille Ferme')||0)+4*smArcs);
       A.set('Goupille Faîte',(A.get('Goupille Faîte')||0)+4*smArcs);
@@ -7050,7 +7050,7 @@ function canonPiece(raw, profil){
   // ── P240 SPÉCIFIQUE ──
   if(n==='Faîte'&&profil==='p240') return 'Faîte P240';
   if(m=n.match(/^Ferme (\d+(?:[.,]\d+)?) m \(\d+ mm\)$/)) return `Ferme P240 ${m[1]}m`;
-  if(m=n.match(/^Pilier (P[\d,]+)$/)&&profil==='p240') return `Pilier P240 ${m[1]}`;
+  if(m=n.match(/^Pilier (P[\d,]+)(?: \(\d+ mm\))?$/)&&profil==='p240') return `Pilier P240 ${m[1]}`;
   if(n==='Barre tension petit') return 'Barre tension petit P240';
   if(n==='Plaque câble Pilier (double)') return 'Plaque câble pilier double P240';
   if(n==='Plaque câble Faîte (simple)') return 'Plaque câble faîte simple P240';
